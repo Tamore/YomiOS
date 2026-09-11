@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model LifeDomain {
+  id        String   @id @default(cuid())
+  name      String
+  icon      String
+  colorCode String
+  
+  projects        Project[]
+  tasks           Task[]
+  knowledgeBlocks KnowledgeBlock[]
+}
+
+model Project {
+  id                 String   @id @default(cuid())
+  domainId           String
+  title              String
+  status             String   @default("Active")
+  progressPercentage Int      @default(0)
+  
+  domain             LifeDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  tasks              Task[]
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  isCompleted Boolean   @default(false)
+  status      String    @default("Not Started")
+  priority    String    @default("P3")
+  dueDate     DateTime?
+  
+  projectId   String?
+  domainId    String?
+  
+  project     Project?    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  domain      LifeDomain? @relation(fields: [domainId], references: [id], onDelete: Cascade)
+}
+
+model KnowledgeBlock {
+  id        String   @id @default(cuid())
+  content   String
+  tags      String?
+  createdAt DateTime @default(now())
+  
+  domainId  String
+  domain    LifeDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  category    String   
+  icon        String   
+  colorClass  String   
+  createdAt   DateTime @default(now())
+}
+
+model InboxItem {
+  id        String   @id @default(cuid())
+  rawInput  String
+  source    String   @default("voice") 
+  status    String   @default("pending") 
+  createdAt DateTime @default(now())
+}
+
+model CourseMaterial {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  type      String   @default("pdf")
+  createdAt DateTime @default(now())
+}

@@ -1,0 +1,188 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'Runik';
+  src: url('/fonts/runik.woff2') format('woff2'),
+       url('/fonts/runik.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --color-surface-container-lowest: #000000;
+  --color-surface-bright: #1a0b2e;
+  --color-secondary-container: #4c1d95;
+  --color-on-primary-fixed-variant: #e9d5ff;
+  --color-on-background: #f3e8ff;
+  --color-primary-fixed: #2e1065;
+  --color-on-error: #ffffff;
+  --color-surface-container: #0a0118;
+  --color-on-secondary: #ffffff;
+  --color-error-container: #ff5f5733;
+  --color-outline-variant: #3b0764; 
+  --color-on-primary-container: #f3e8ff; 
+  --color-error: #ff5f57;
+  --color-secondary-fixed: #2e1065; 
+  --color-on-tertiary-fixed: #f3e8ff; 
+  --color-on-surface: #ffffff;
+  --color-on-error-container: #fca5a5;
+  --color-tertiary-fixed-dim: #7e22ce; 
+  --color-on-tertiary-fixed-variant: #e9d5ff;
+  --color-on-secondary-container: #d8b4e2;
+  --color-secondary: #06b6d4;
+  --color-tertiary-fixed: #4c1d95; 
+  --color-secondary-fixed-dim: #0e7490; 
+  --color-primary: #c084fc;
+  --color-inverse-primary: #581c87;
+  --color-inverse-surface: #f3e8ff;
+  --color-primary-container: #3b0764;
+  --color-background: #000000;
+  --color-surface-tint: #c084fc;
+  --color-surface-container-low: #000000; 
+  --color-on-tertiary-container: #f3e8ff;
+  --color-on-tertiary: #ffffff;
+  --color-surface-container-high: #0f051e;
+  --color-on-secondary-fixed: #cffafe;
+  --color-on-primary: #000000;
+  --color-on-secondary-fixed-variant: #67e8f9;
+  --color-tertiary: #a855f7;
+  --color-surface-container-highest: #1a0b2e; 
+  --color-primary-fixed-dim: #9333ea;
+  --color-tertiary-container: #581c87;
+  --color-surface-variant: #1a0b2e;
+  --color-surface-dim: #000000;
+  --color-inverse-on-surface: #000000;
+  --color-surface: transparent;
+  --color-on-surface-variant: #d8b4e2;
+  --color-on-primary-fixed: #f3e8ff;
+  --color-outline: rgba(192, 132, 252, 0.4);
+  --color-surface-charcoal: #000000;
+  --color-surface-slate: rgba(26, 11, 46, 0.5);
+  --color-border-muted: rgba(192, 132, 252, 0.2);
+  --color-learning-cyan: #06b6d4;
+  --color-learning-cobalt: #c084fc;
+
+  --spacing-unit: 4px;
+  --spacing-panel-padding: 12px;
+  --spacing-gutter: 16px;
+  --spacing-container-margin: 24px;
+
+  --font-headline-md: "Runik", "Cinzel", serif;
+  --font-label-mono: "JetBrains Mono", monospace;
+  --font-body-base: "Almendra", serif;
+  --font-display-lg: "Runik", "Cinzel", serif;
+  --font-body-sm: "Almendra", serif;
+}
+
+body {
+  background-color: #000000;
+  color: #ffffff;
+  min-height: 100vh;
+  background-attachment: fixed;
+}
+
+@utility liquid-mesh-primary { box-shadow: 0 10px 15px -3px rgba(192, 132, 252, 0.1); }
+@utility liquid-mesh-secondary { box-shadow: 0 10px 15px -3px rgba(6, 182, 212, 0.1); }
+@utility liquid-mesh-tertiary { box-shadow: 0 10px 15px -3px rgba(168, 85, 247, 0.1); }
+
+@utility active-glow { 
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+  &:hover {
+    box-shadow: 0 0 20px 0 rgba(192, 132, 252, 0.25);
+    transform: translateY(-4px);
+    border-color: rgba(192, 132, 252, 0.5);
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: rgba(15, 5, 30, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(192, 132, 252, 0.15);
+    box-shadow: 0 0 15px rgba(0,0,0,0.8);
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  /* Engraved Rune Corners for all glass cards */
+  .glass-card::before, .glass-card::after {
+    content: "";
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    pointer-events: none;
+    opacity: 0.3;
+    transition: all 0.3s ease;
+  }
+
+  .glass-card::before {
+    top: -1px;
+    left: -1px;
+    border-top: 1px solid var(--color-primary);
+    border-left: 1px solid var(--color-primary);
+  }
+
+  .glass-card::after {
+    bottom: -1px;
+    right: -1px;
+    border-bottom: 1px solid var(--color-primary);
+    border-right: 1px solid var(--color-primary);
+  }
+
+  .glass-card:hover::before, .glass-card:hover::after {
+    opacity: 1;
+    width: 20px;
+    height: 20px;
+    box-shadow: 0 0 10px rgba(192, 132, 252, 0.4);
+  }
+
+  .animate-float {
+    animation: float linear infinite;
+  }
+
+  @keyframes vanishWoof {
+    0% { transform: scale(1) translateY(0); opacity: 1; filter: blur(0px); }
+    40% { transform: scale(1.05) translateY(-5px); opacity: 0.8; filter: blur(4px) drop-shadow(0 0 20px rgba(192, 132, 252, 0.8)); }
+    100% { transform: scale(0.5) translateY(-20px); opacity: 0; filter: blur(12px); }
+  }
+
+  .vanish-woof {
+    animation: vanishWoof 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    pointer-events: none;
+  }
+
+  .glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  .glow-border:focus-within { border-color: rgba(192, 132, 252, 0.6); box-shadow: 0 0 0 1px rgba(192, 132, 252, 0.3); }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Holographic Custom Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(192, 132, 252, 0.3);
+    border-radius: 10px;
+    transition: background 0.3s ease;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(192, 132, 252, 0.8);
+  }
+  /* Firefox support */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(192, 132, 252, 0.3) transparent;
+  }
+}
+
+@keyframes float {
+  0% { transform: translateY(0) translateX(0); }
+  100% { transform: translateY(-100vh) translateX(20px); }
+}
