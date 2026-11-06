@@ -26,6 +26,7 @@ from tools.web_intelligence import live_web_search, scrape_webpage_markdown
 from tools.code_sandbox import execute_python_code
 from tools.workspace_manager import list_workspace_files, save_research_note, analyze_proposal_stats
 from tools.japanese_tutor import get_random_card, generate_quiz_question, get_all_flashcards
+from tools.google_workspace import google_workspace
 from mcp_connector import mcp_connector
 
 SYSTEM_PROMPT = """You are Yomi, an elite, witty, and exceptionally sharp executive AI companion and research chief of staff.
@@ -99,7 +100,43 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
         }
 
     # -------------------------------------------------------------
-    # 3. MCP CONNECTOR & CITEX AGENT BRIDGE
+    # 3. GOOGLE WORKSPACE CONNECTOR (GMAIL & GOOGLE DRIVE)
+    # e.g., "draft gmail to fukuda", "open in gmail", "save to drive", "google workspace status"
+    # -------------------------------------------------------------
+    if any(q in lower for q in ["google workspace status", "gmail status", "drive status", "check google"]):
+        state = google_workspace.check_auth_state()
+        return {
+            "reply": f"Google Workspace Bridge: **{state['status']}**.\n• Ready to open 1-click pre-filled Gmail drafts and mirror documents to Google Drive Sync folder.",
+            "tool_used": "google_workspace_status",
+            "data": state
+        }
+
+    gmail_match = re.search(r'(?:open in gmail|draft gmail|send via gmail)\s*(?:to\s+)?([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)?', lower)
+    if gmail_match and not any(w in lower for w in ["academic email"]):
+        to_email = gmail_match.group(1) or "hiroaki@shibaura-it.ac.jp"
+        subj = "Inquiry regarding Master's Research (AY2027) — Nirmiti Ramesh Tamore"
+        body = "Dear Professor,\n\nI hope this email finds you well.\n\nBest regards,\nNirmiti Ramesh Tamore"
+        res = await google_workspace.draft_or_compose_email(to=to_email, subject=subj, body=body)
+        db.add_log("Google Workspace", f"Generated Gmail Compose link for {to_email}", "EMAIL", "mail")
+        return {
+            "reply": f"Gmail Compose Link prepared for **{to_email}**! Click below to open in your browser or native app:\n\n[Open Compose in Gmail]({res['web_url']})",
+            "tool_used": "gmail_compose",
+            "data": res
+        }
+
+    if "save to drive" in lower or "sync to drive" in lower or "upload to drive" in lower:
+        # Save latest brief or proposal
+        source_doc = r"d:\Japan Prep Temp\Nirmiti_Masters\Final_Formal_Research_Proposal.md"
+        stage_res = google_workspace.stage_file_to_drive(source_doc, "Master_Proposals")
+        db.add_log("Google Workspace", "Staged proposal to Google Drive Sync", "DRIVE", "hard-drive")
+        return {
+            "reply": f"Staged **{stage_res['filename']}** to your Google Drive Sync folder (`Google_Drive_Sync/Master_Proposals`).",
+            "tool_used": "google_drive_sync",
+            "data": stage_res
+        }
+
+    # -------------------------------------------------------------
+    # 4. MCP CONNECTOR & CITEX AGENT BRIDGE
     # e.g., "citex status", "launch citex", "ask citex to research self-adaptive systems", "citex notes"
     # -------------------------------------------------------------
     if any(q in lower for q in ["citex status", "mcp status", "check citex", "is citex running"]):

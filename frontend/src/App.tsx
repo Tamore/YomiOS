@@ -4,7 +4,7 @@ import {
   FileText, Download, Bot, Play, Trash2, 
   Cpu, Battery, Mic, Send, BookOpen, Volume2, 
   Code, Copy, Check, RefreshCw, 
-  School, HelpCircle, HardDrive
+  School, HelpCircle, HardDrive, Mail
 } from 'lucide-react';
 
 interface Domain {
@@ -774,17 +774,27 @@ print(calculate_byzantine_fault_tolerance(10))`
                 <div className="p-4 rounded-lg bg-zinc-900 border border-white/[0.08] space-y-3">
                   <div className="flex items-center justify-between border-b border-white/[0.06] pb-2">
                     <span className="text-xs font-mono text-zinc-300">Subject: {draftedEmail.subject}</span>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(`${draftedEmail.subject}\n\n${draftedEmail.body}`);
-                        setCopiedEmail(true);
-                        setTimeout(() => setCopiedEmail(false), 2000);
-                      }}
-                      className="flex items-center gap-1 text-xs font-mono text-zinc-400 hover:text-white"
-                    >
-                      {copiedEmail ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-                      {copiedEmail ? "Copied!" : "Copy Full Text"}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <a
+                        href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(selectedProfForEmail === 'Hiroaki Fukuda' ? 'hiroaki@shibaura-it.ac.jp' : '')}&su=${encodeURIComponent(draftedEmail.subject)}&body=${encodeURIComponent(draftedEmail.body)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1.5 text-xs font-mono text-emerald-400 hover:text-emerald-300"
+                      >
+                        <Mail size={13} /> Open in Gmail
+                      </a>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${draftedEmail.subject}\n\n${draftedEmail.body}`);
+                          setCopiedEmail(true);
+                          setTimeout(() => setCopiedEmail(false), 2000);
+                        }}
+                        className="flex items-center gap-1 text-xs font-mono text-zinc-400 hover:text-white"
+                      >
+                        {copiedEmail ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                        {copiedEmail ? "Copied!" : "Copy Full Text"}
+                      </button>
+                    </div>
                   </div>
                   <pre className="text-xs font-mono text-zinc-300 whitespace-pre-wrap leading-relaxed max-h-56 overflow-y-auto">
                     {draftedEmail.body}

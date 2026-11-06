@@ -33,6 +33,7 @@ from tools.workspace_manager import list_workspace_files, save_research_note, an
 from tools.academic_researcher import conduct_academic_research
 from tools.web_summarizer import summarize_and_export_pdf
 from tools.japanese_tutor import get_all_flashcards, get_random_card, generate_quiz_question
+from tools.google_workspace import google_workspace
 from mcp_connector import mcp_connector
 
 app = FastAPI(title="Yomi 2.0 Backlit Executive Engine", version="2.0.0")
@@ -279,6 +280,34 @@ def get_memories_endpoint():
 def store_memory_endpoint(payload: MemoryStorePayload):
     memory.remember(payload.key, payload.value, payload.category or "fact")
     return {"success": True, "key": payload.key}
+
+# -------------------------------------------------------------
+# Tool Endpoints: Google Workspace (Gmail & Drive)
+# -------------------------------------------------------------
+class GmailDraftReq(BaseModel):
+    to: str
+    subject: str
+    body: str
+
+class DriveStageReq(BaseModel):
+    file_path: str
+    subfolder: Optional[str] = "Research_Briefs"
+
+@app.get("/api/workspace/google/status")
+def google_status_endpoint():
+    return google_workspace.check_auth_state()
+
+@app.post("/api/workspace/google/draft")
+async def google_draft_endpoint(payload: GmailDraftReq):
+    return await google_workspace.draft_or_compose_email(payload.to, payload.subject, payload.body)
+
+@app.post("/api/workspace/google/drive-stage")
+def google_drive_stage_endpoint(payload: DriveStageReq):
+    return google_workspace.stage_file_to_drive(payload.file_path, payload.subfolder or "Research_Briefs")
+
+@app.get("/api/workspace/google/drive-files")
+def google_drive_files_endpoint():
+    return google_workspace.list_drive_staged_files()
 
 # -------------------------------------------------------------
 # Tool Endpoints: Japanese Language Tutor & Academic Keigo

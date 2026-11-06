@@ -227,3 +227,4 @@ def generate_quiz_question(category: Optional[str] = None) -> Dict[str, Any]:
         "options": options,
         "usage_tip": target["usage_tip"]
     }
+
