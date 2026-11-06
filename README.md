@@ -1,175 +1,166 @@
-# ⚡ YOMI 2.0 — Executive AI Assistant & Research OS
+# Yomi — Executive Intelligence & Personal Operating System
 
-> **Yomi OS 2.0** is an autonomous executive AI assistant, sovereign research chief of staff, and multi-domain orchestrator built with an ultra-minimalist, high-density **Bklit UI** design system ([bklit.com](https://bklit.com)), hardware telemetry, sub-millisecond intent routing, Model Context Protocol (MCP) bridges, and deep academic synthesis capabilities.
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Aesthetic-Bklit_Zinc_950-18181b?style=for-the-badge" alt="Bklit Zinc-950" />
-  <img src="https://img.shields.io/badge/Router-Sub--1ms_Regex_Cascade-22c55e?style=for-the-badge" alt="Sub-1ms Router" />
-  <img src="https://img.shields.io/badge/Protocol-Model_Context_Protocol_(MCP)-6366f1?style=for-the-badge" alt="MCP Bridge" />
-  <img src="https://img.shields.io/badge/Frontend-Vite_+_React_+_Tailwind-38bdf8?style=for-the-badge" alt="Vite React" />
-  <img src="https://img.shields.io/badge/Backend-FastAPI_+_SQLite-009688?style=for-the-badge" alt="FastAPI" />
-  <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT" />
-</p>
+Yomi is an autonomous personal AI executive system designed with the ultra-minimalist, high-density **Bklit UI** design system, local-first neural memory, sub-millisecond intent routing, Model Context Protocol (MCP) integrations, and specialized academic research workflows.
 
 ---
 
-## 🏛️ System Architecture
+## System Architecture
 
 ```mermaid
 graph TD
-    User["User (Voice / Natural Language)"] --> HUD["Bklit Executive HUD (Vite / React)"]
-    HUD -->|WebSocket / REST| FastAPI["FastAPI Executive Engine (:8765)"]
+    User["User (Natural Language / Interface)"] --> HUD["Yomi Executive HUD (Vite / React / Tailwind v4)"]
+    HUD -->|REST / WebSocket| API["FastAPI Executive Engine (:8765)"]
     
-    subgraph Brain ["🧠 Yomi Hybrid Intelligence Core"]
-        FastRouter["Sub-1ms Fast Regex Router"]
-        OllamaLocal["Local Ollama (Qwen2.5:7b / Llama3.2)"]
-        CloudLLM["Cloud Fallback (Gemini / Groq)"]
-        Memory["Persistent Neural Memory (SQLite)"]
-        FastRouter --> OllamaLocal
+    subgraph Brain ["Yomi Hybrid Intelligence Core"]
+        FastRouter["Intent & Routing Engine"]
+        LocalLLM["Local LLM (Ollama / Qwen2.5)"]
+        CloudLLM["Cloud Fallback (Gemini / Anthropic / Groq)"]
+        Memory["Persistent Memory (SQLite)"]
+        FastRouter --> LocalLLM
         FastRouter --> CloudLLM
         FastRouter <--> Memory
     end
-    FastAPI --> Brain
+    API --> Brain
 
-    subgraph MCPBridge ["🔌 Model Context Protocol (MCP) Bridge"]
-        MCPConnector["MCP Multi-App Connector"]
-        CiteX["CiteX Research Engine (:8000)"]
-        ExternalIDE["Antigravity / Claude Desktop / Cursor"]
-        MCPConnector <--> CiteX
-        FastAPI <--> ExternalIDE
+    subgraph MCPBridge ["Model Context Protocol (MCP) Bridge"]
+        MCPConnector["MCP Multi-Server Client"]
+        FS["Filesystem Server"]
+        GH["GitHub Server"]
+        Fetch["Fetch / Search Servers"]
+        MemoryServer["Memory Server"]
+        MCPConnector --- FS
+        MCPConnector --- GH
+        MCPConnector --- Fetch
+        MCPConnector --- MemoryServer
     end
     Brain --> MCPBridge
 
-    subgraph Tools ["🛠️ Specialized Autonomous Tool Suite"]
-        T1["Academic Researcher (ArXiv, Semantic Scholar, BibTeX, PDF Briefs)"]
-        T2["Japan Admissions & Lab Profiler (SIT, Waseda IPS, NAIST, Science Tokyo)"]
-        T3["Document & Paper Reader (Local PDF extraction & search)"]
-        T4["Live Web Search & Deep Markdown Scraper (DuckDuckGo zero-key)"]
-        T5["Code Sandbox & REPL (Safe isolated Python execution)"]
-        T6["System Telemetry & Hardware Monitor (CPU, RAM, Disk, Battery, Net)"]
-        T7["Meta-Agent Factory (Spawn & run background worker subagents)"]
+    subgraph Workflows ["Autonomous Feature Modules"]
+        M1["Activity & Habit Tracker (52-week heatmap)"]
+        M2["Academic Dossier & Proposal Indexer"]
+        M3["Pipeline & Task Tracker (Floating console)"]
+        M4["Japanese Language Dojo (Spaced repetition)"]
+        M5["Paper & Literature Synthesis (ArXiv / PDF)"]
     end
-    Brain --> Tools
+    Brain --> Workflows
 ```
 
 ---
 
-## ⚡ Core Features & Tool Matrix
+## Core Capabilities
 
-### 1. 🎛️ Bklit Monochromatic Executive HUD
-* Built strictly to the **Bklit UI Design Specification** ([bklit.com](https://bklit.com)).
-* Canvas: Zinc-950 (`#09090b`), Hairline Borders (`1px solid rgba(255, 255, 255, 0.08)`), subtle hover elevation (`translateY(-2px)`).
-* 4 Segmented Primary Hubs:
-  1. `⚡ Intelligence HUD` — Live conversational feed, floating dictation capsule, quick-action chips.
-  2. `🔬 Academic Radar` — ArXiv literature synthesis, BibTeX generator, PDF download cards.
-  3. `⛩️ Roadmaps & Matrix` — Life domains, milestone trackers, priority execution matrix (`P1`, `P2`, `P3`).
-  4. `🤖 Sub-Agents` — Meta-Agent spawner, background workers, 1-click execution.
+### 1. Bklit Minimalist Executive Interface
+* Built strictly to the **Bklit UI Design Specification** with dark obsidian surfaces (`#09090b` / `#0e0e11`), hairline borders (`rgba(255, 255, 255, 0.08)`), and precision typography.
+* Integrated custom OKLCH color scale with signature rose/coral accenting (`oklch(0.756 0.211 0)`) and Bklit 5-step sequential heatmap scales (`--chart-scale-01` through `--chart-scale-05`).
+* Custom hairline scrollbars (`.card-scroll`) and zero emoji clutter.
 
-### 2. 🔌 Model Context Protocol (MCP) & CiteX Bridge
-* Native MCP Connector allowing Yomi to act as an MCP host and bridge external AI applications:
-  * **CiteX Autonomous Research Engine:** Multi-source literature reviews (OpenAlex, Zenodo, ArXiv) and automatic IEEE LaTeX / PDF compilation.
-  * Connect external MCP tools or start CiteX background service via voice: *"launch citex"* or *"ask citex to research self-adaptive systems"*.
-  * Configuration in `backend/mcp_servers.json`.
+### 2. 52-Week Habit & Research Heatmap
+* Year-long activity and habit tracker with animated squircle cells, active streak monitoring, and dynamic hover metrics.
+* Context-filtered views for multiple active workflows (Dojo drills, engineering, research synthesis, applications).
 
-### 3. ⛩️ Japan Graduate Admissions & Lab Fit Profiler
-* Built-in intelligence for Japanese universities and faculty:
-  * **Shibaura Institute of Technology (SIT):** Prof. Hiroaki Fukuda (Export control, pre-consultation, TAO).
-  * **Waseda University (IPS):** Prof. Shigeru Fujimura (AY2027 application window: Dec 7–18, 2026).
-  * **NAIST:** Prof. Michiko Inoue (Pre-screening deadline: Dec 8, 2026).
-  * **Institute of Science Tokyo:** Prof. Kenji Tei & Prof. Xavier Défago (IGP-C window: Jan 2027).
-  * **Ritsumeikan University:** FREX Space & Earth System Science Masterclass.
-* **Academic Email Drafter:** Generates respectful, high-register inquiry and follow-up emails according to Japanese institutional conventions.
-* **Thematic Fit Matcher:** Evaluates overlap between proposal keywords and prospective advisor publications.
+### 3. Intelligence HUD & Executive Neural Console
+* Unified command console with conversational AI integration backed by local Ollama (`qwen2.5:7b`) and cloud fallbacks.
+* Executive velocity and preparation metrics with responsive SVG charts (waveform curves, circular readiness gauges, and category distributions).
 
-### 4. 🔬 Academic Research Satellite & PDF Brief Generator
-* Direct ArXiv and Semantic Scholar integration.
-* Automatically compiles publication-grade monochrome PDF research briefs using ReportLab with one-click browser download.
-* Generates formatted BibTeX citations.
+### 4. Academic Dossier & Document Repository
+* Centralized indexing of research proposals, abstracts, degree credentials, and publication drafts.
+* Configurable institutional tracking matrix supporting target labs, pre-screening evaluations, and proposal alignments.
 
-### 5. 🌐 Sovereign Web Intelligence & Local PDF Reader
-* **Live Zero-Key Web Search:** Real-time search via DuckDuckGo HTML parser—no API keys required.
-* **Deep Page Reader:** Strips ads, scripts, and navigation to extract clean research Markdown notes.
-* **Local Paper Reader:** Inspects local `.pdf` files, extracts page snippets, abstracts, and table contents via `pypdf`.
+### 5. Floating Pipeline & Action Console
+* Ultra-compact 26px minimizable micro-pill (`Pipeline 3 · 2 ^`) stationed in the corner with dedicated bottom clearance to prevent interface obstruction.
+* Expandable into two synchronized views:
+  * **Application Pipeline:** Multi-stage institutional tracker with configurable status tags (Replied, In Review, Open Windows, Struck Out).
+  * **Action Checklist:** Interactive task checklist with completion states, strike-through formatting, and priority metadata.
 
-### 6. 💻 Python Code Sandbox & REPL
-* Runs mathematical calculations, distributed consensus equations ($3f + 1 \le n$), and algorithmic simulations in an isolated subprocess with timeout protection.
+### 6. Nihongo Dojo (Language Learning Hub)
+* Spaced-repetition flashcard system with bi-directional flip animations covering technical terminology, Kanji, Hiragana, and high-register communication.
+* Interactive daily drill quiz engine with instant validation and grammatical explanations.
 
-### 7. 🎙️ Edge Neural Voice Engine
-* Zero-VRAM neural speech synthesis powered by Microsoft `edge-tts` with W3C SSML breath-cadence pacing (400ms sentence pauses, 200ms comma pauses).
+### 7. Model Context Protocol (MCP) Integration Hub
+* Native client interface for external MCP servers (`filesystem`, `fetch`, `github`, `brave-search`, `memory`).
+* Dedicated security controls featuring masked credential storage and interactive visibility toggles (reveal/hide tokens).
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```text
-YomiOS/
+Yomi/
 ├── backend/
-│   ├── brain.py               # Sub-1ms regex router + hybrid LLM orchestrator
-│   ├── llm_client.py          # Unified multi-provider (Ollama / Gemini / Groq)
-│   ├── memory.py              # Persistent SQLite memory & user profile recall
-│   ├── database.py            # SQLite schema for domains, projects, tasks, logs
-│   ├── mcp_connector.py       # MCP bridge & CiteX connector
-│   ├── mcp_servers.json       # Registered MCP server definitions
-│   ├── meta_agent_factory.py  # Spawns & runs sandboxed subagents
-│   ├── voice_engine.py        # Edge-TTS neural speech engine
-│   ├── main.py                # FastAPI REST & WebSocket server
+│   ├── brain.py               # Intent routing and LLM orchestration
+│   ├── llm_client.py          # Multi-provider client (Ollama / Gemini / Groq)
+│   ├── memory.py              # Persistent SQLite memory and context recall
+│   ├── database.py            # Database schema for projects, tasks, and history
+│   ├── mcp_connector.py       # Model Context Protocol bridge
+│   ├── mcp_servers.json       # MCP server registrations and configs
+│   ├── voice_engine.py        # Edge speech synthesis engine
+│   ├── main.py                # FastAPI REST and WebSocket server
 │   ├── requirements.txt       # Python dependencies
 │   └── tools/
-│       ├── academic_researcher.py  # ArXiv, Semantic Scholar, ReportLab PDF
-│       ├── admissions_engine.py    # University trackers, lab matcher, email drafter
-│       ├── paper_reader.py         # Local PDF inspection & search
-│       ├── web_intelligence.py     # Live DDG search & clean scraper
-│       ├── web_summarizer.py       # Webpage to PDF briefing exporter
-│       ├── code_sandbox.py         # Isolated Python execution runner
-│       ├── workspace_manager.py    # Notes, file scanner, proposal statistics
-│       └── os_control.py           # Real-time hardware telemetry & app launcher
+│       ├── academic_researcher.py  # ArXiv and paper synthesis tools
+│       ├── admissions_engine.py    # Pipeline and status manager
+│       ├── paper_reader.py         # Local PDF reader and extraction
+│       ├── web_intelligence.py     # Clean search and scraping utilities
+│       └── code_sandbox.py         # Isolated Python execution sandbox
 ├── frontend/
 │   ├── src/
-│   │   ├── App.tsx            # Bklit UI HUD, 4 segmented hubs, audio player
-│   │   ├── index.css          # Tailwind CSS + Bklit dark monochromatic styles
-│   │   └── main.tsx           # React entry point
-│   ├── package.json
-│   ├── vite.config.ts
-│   └── tailwind.config.js
-├── install_dependencies.bat   # 1-click Windows dependency setup
-├── run_yomi.bat               # 1-click launcher for backend + frontend
-├── mcp_config.json            # MCP server configuration for IDEs
-└── README.md
+│   │   ├── App.tsx            # Primary Yomi OS interface and hub router
+│   │   ├── index.css          # Tailwind CSS v4 + Bklit design tokens
+│   │   └── main.tsx           # React 19 entry point
+│   ├── public/
+│   │   └── favicon.svg        # Cyber-Kamon vector mark on obsidian tile
+│   ├── package.json           # Frontend dependencies (@tailwindcss/vite, lucide-react)
+│   ├── vite.config.ts         # Vite build configuration with Tailwind v4 plugin
+│   └── index.html             # HTML shell
+├── install_dependencies.bat   # Windows dependency setup script
+├── run_yomi.bat               # Resilient background launcher
+└── README.md                  # System documentation
 ```
 
 ---
 
-## 🚀 Quickstart Guide
+## Quickstart Guide
 
 ### 1. Prerequisites
-- **Python 3.10+** (Python 3.11–3.14 verified)
-- **Node.js 18+**
-- *(Optional)* [Ollama](https://ollama.ai) with `qwen2.5:7b` for offline LLM reasoning
+* **Python 3.10+** (Python 3.11–3.14 verified)
+* **Node.js 18+** (Node.js 20+ recommended)
+* *(Optional)* [Ollama](https://ollama.ai) with `qwen2.5:7b` for offline intelligence
 
 ### 2. Installation
-Run the automated installer:
-```bash
+Run the automated Windows installer:
+```cmd
 .\install_dependencies.bat
 ```
-Or manually:
+
+Or install manually:
 ```bash
+# Backend dependencies
 pip install -r backend/requirements.txt
-cd frontend && npm install
+
+# Frontend dependencies
+cd frontend
+npm install
 ```
 
-### 3. Launching Yomi OS
-Double click `run_yomi.bat` or run:
+### 3. Launching Yomi
+Launch both backend and frontend with a single command:
+```cmd
+.\run_yomi.bat
+```
+
+Or run manually in separate terminals:
 ```bash
-# Terminal 1: Backend
-uvicorn backend.main:app --port 8765 --reload
+# Terminal 1: Backend API (port 8765)
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8765
 
-# Terminal 2: Frontend
-cd frontend && npm run dev
+# Terminal 2: Frontend (port 5173)
+cd frontend
+npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
-Open `http://localhost:5173` in your browser.
+Access the interface at `http://127.0.0.1:5173`.
 
 ---
 
-## 📜 License
+## License
 Distributed under the **MIT License**.
