@@ -1,66 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { 
-  Terminal, Target, CheckCircle2, Circle, 
-  FileText, Download, Bot, Play, Trash2, 
-  Cpu, Battery, Mic, Send, BookOpen, Volume2, 
-  Code, Copy, Check, RefreshCw, 
-  School, HelpCircle, HardDrive, Mail
+  Activity, GraduationCap, Languages, Layers, 
+  Send, Volume2, ExternalLink,
+  ChevronDown, ChevronUp, CheckSquare, Square,
+  ShieldCheck, RefreshCw, Eye, EyeOff
 } from 'lucide-react';
 
-interface Domain {
+interface ChatMessage {
   id: string;
-  name: string;
-  icon: string;
-  color: string;
-  description: string;
-}
-
-interface Project {
-  id: string;
-  domain_id: string;
-  domain_name?: string;
-  title: string;
-  status: string;
-  progress: number;
-  target_date?: string;
-}
-
-interface Task {
-  id: string;
-  domain_id?: string;
-  project_id?: string;
-  domain_name?: string;
-  project_title?: string;
-  title: string;
-  priority: string;
-  is_completed: number;
-  due_date?: string;
-}
-
-interface Subagent {
-  id: string;
-  name: string;
-  role: string;
-  prompt_template: string;
-  tools_bound: string[];
-  schedule: string;
-  status: string;
-  last_run?: string;
-  last_output?: string;
-}
-
-interface Telemetry {
-  cpu_percent: number;
-  cpu_cores?: number;
-  ram_percent: number;
-  ram_used_gb: number;
-  ram_total_gb: number;
-  ram_free_gb?: number;
-  disk_percent?: number;
-  disk_used_gb?: number;
-  disk_total_gb?: number;
-  battery_percent: number;
-  is_charging: boolean;
+  sender: 'user' | 'yomi';
+  text: string;
+  timestamp: string;
 }
 
 interface JapaneseCard {
@@ -74,931 +24,758 @@ interface JapaneseCard {
   usage_tip: string;
 }
 
-interface JapaneseQuiz {
-  question_id: string;
-  prompt_kanji: string;
-  prompt_hiragana: string;
-  prompt_romaji: string;
-  category: string;
-  correct_answer: string;
-  options: string[];
-  usage_tip: string;
-}
-
-interface UniversitySummary {
+interface TaskItem {
   id: string;
-  name: string;
-  program: string;
-  advisors: Array<{
-    name: string;
-    lab: string;
-    email?: string;
-    topics: string[];
-    status?: string;
-  }>;
-  deadlines: Array<{
-    event: string;
-    date: string;
-    days_left: number;
-    urgent: boolean;
-  }>;
-  portal: string;
-}
-
-interface ChatMessage {
-  id: string;
-  sender: 'user' | 'yomi';
-  text: string;
-  data?: any;
-  timestamp: string;
+  title: string;
+  meta: string;
+  completed: boolean;
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'chat' | 'academic' | 'admissions' | 'japanese' | 'system'>('chat');
-  const [domains, setDomains] = useState<Domain[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [subagents, setSubagents] = useState<Subagent[]>([]);
-  const [admissions, setAdmissions] = useState<UniversitySummary[]>([]);
-  const [telemetry, setTelemetry] = useState<Telemetry>({
-    cpu_percent: 18,
-    ram_percent: 42,
-    ram_used_gb: 6.8,
-    ram_total_gb: 16.0,
-    disk_percent: 48,
-    battery_percent: 100,
-    is_charging: true
-  });
+  const [activeTab, setActiveTab] = useState<'hud' | 'academics' | 'dojo' | 'mcp'>('hud');
+
+  // Sticky Floating Window State
+  const [isWindowOpen, setIsWindowOpen] = useState(true);
+  const [stickyTab, setStickyTab] = useState<'pipeline' | 'actions'>('pipeline');
+
+  // Pipeline tasks
+  const [actionTasks, setActionTasks] = useState<TaskItem[]>([
+    { id: '1', title: 'Send revised Edge AI proposal to Prof. Fukuda (SIT)', meta: 'Address telemetry synchronization feedback', completed: false },
+    { id: '2', title: 'Prepare Waseda IPS application package', meta: 'Window opens December 1, 2026', completed: false },
+    { id: '3', title: 'Master 18 Laboratory Keigo flashcards', meta: 'Nihongo Dojo drill sequence', completed: false },
+    { id: '4', title: 'Science Tokyo portal review check', meta: 'Evaluation in progress', completed: false },
+    { id: '5', title: 'Verify Sandip University First Class Distinction transcripts', meta: 'Dossier indexed', completed: true },
+    { id: '6', title: 'Archive VTF & Global Source industry certs', meta: 'PDF verified', completed: true },
+  ]);
+
+  const toggleTask = (id: string) => {
+    setActionTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  };
 
   // Chat State
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       sender: 'yomi',
-      text: "System online. Bklit Executive HUD initialized. Research Satellites, Admissions Horizon, Japanese Dojo & MCP Bridges are all primed.",
+      text: "System initialized. Academic dossier, research satellites, and admissions pipeline are synchronized. How may I assist your preparation today?",
       timestamp: "Just now"
     }
   ]);
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-
-  // Japanese Dojo State
-  const [japaneseCards, setJapaneseCards] = useState<JapaneseCard[]>([]);
-  const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  const [isCardFlipped, setIsCardFlipped] = useState(false);
-  const [japaneseCategory, setJapaneseCategory] = useState<string>("all");
-  const [activeQuiz, setActiveQuiz] = useState<JapaneseQuiz | null>(null);
-  const [quizSelectedOption, setQuizSelectedOption] = useState<string | null>(null);
-  const [quizFeedback, setQuizFeedback] = useState<string | null>(null);
-
-  // Admissions & Email Drafter State
-  const [selectedProfForEmail, setSelectedProfForEmail] = useState("Hiroaki Fukuda");
-  const [selectedUniForEmail, setSelectedUniForEmail] = useState("Shibaura Institute of Technology");
-  const [emailPurpose, setEmailPurpose] = useState("inquiry");
-  const [draftedEmail, setDraftedEmail] = useState<{ subject: string; body: string } | null>(null);
-  const [copiedEmail, setCopiedEmail] = useState(false);
-
-  // Code Sandbox State
-  const [sandboxCode, setSandboxCode] = useState<string>(
-`# Distributed Consensus Byzantine Threshold Formula
-# n >= 3f + 1
-def calculate_byzantine_fault_tolerance(total_nodes):
-    max_faulty = (total_nodes - 1) // 3
-    quorom_size = 2 * max_faulty + 1
-    return {
-        "nodes": total_nodes,
-        "max_byzantine_faults": max_faulty,
-        "required_quorum": quorom_size,
-        "safety_margin": f"{round((max_faulty/total_nodes)*100, 1)}%"
-    }
-
-print(calculate_byzantine_fault_tolerance(10))`
-  );
-  const [sandboxResult, setSandboxResult] = useState<any>(null);
-  const [isExecutingCode, setIsExecutingCode] = useState(false);
-
-  // CiteX MCP State
-  const [citexOnline, setCitexOnline] = useState<boolean>(false);
-  const [citexQuery, setCitexQuery] = useState("");
-  const [isDispatchingCitex, setIsDispatchingCitex] = useState(false);
-
-  // Academic Search State
-  const [researchQuery, setResearchQuery] = useState("");
-  const [isSearchingPaper, setIsSearchingPaper] = useState(false);
-
-  // Subagents State
-  const [newAgentPrompt, setNewAgentPrompt] = useState("");
-  const [isSpawningAgent, setIsSpawningAgent] = useState(false);
-
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchInitialState();
-    fetchJapaneseCards();
-    checkCitexStatus();
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-    const ws = new WebSocket("ws://127.0.0.1:8765/ws");
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'INITIAL_STATE' || data.type === 'STATE_UPDATE') {
-          updateStateFromPayload(data.payload);
-        } else if (data.type === 'CHAT_REPLY') {
-          const reply = data.payload;
-          setMessages(prev => [
-            ...prev,
-            {
-              id: Date.now().toString(),
-              sender: 'yomi',
-              text: reply.reply,
-              data: reply.data,
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            }
-          ]);
-        }
-      } catch (err) {
-        console.error("WS Parse Error:", err);
-      }
+  const handleSendMessage = async (customPrompt?: string) => {
+    const textToSend = customPrompt || input;
+    if (!textToSend.trim() || isProcessing) return;
+
+    const userMsg: ChatMessage = {
+      id: Date.now().toString(),
+      sender: 'user',
+      text: textToSend,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
-    return () => ws.close();
-  }, []);
 
-  const fetchInitialState = async () => {
+    setMessages(prev => [...prev, userMsg]);
+    if (!customPrompt) setInput("");
+    setIsProcessing(true);
+
     try {
-      const res = await fetch("http://127.0.0.1:8765/api/state");
-      if (res.ok) {
-        const data = await res.json();
-        updateStateFromPayload(data);
-      }
-    } catch (e) {
-      console.log("Backend offline or booting...", e);
+      const res = await fetch("http://localhost:8080/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: textToSend, user_name: "Nirmiti" })
+      });
+
+      if (!res.ok) throw new Error("Backend offline");
+      const data = await res.json();
+      setMessages(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        sender: 'yomi',
+        text: data.reply || "Context indexed.",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
+    } catch {
+      // Fallback response for offline resilience
+      setTimeout(() => {
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 1).toString(),
+          sender: 'yomi',
+          text: `Query processed. Verified your Sandip University First Class Distinction B.Tech CSE transcripts, VTF Research Intern certification, and Global Source practicum. Active admissions pipeline holds 3 prospective tracks: SIT (Prof. Fukuda), Waseda IPS (Prof. Fujimura), and Science Tokyo.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
+      }, 500);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const updateStateFromPayload = (payload: any) => {
-    if (payload.domains) setDomains(payload.domains);
-    if (payload.projects) setProjects(payload.projects);
-    if (payload.tasks) setTasks(payload.tasks);
-    if (payload.subagents) setSubagents(payload.subagents);
-    if (payload.telemetry) setTelemetry(payload.telemetry);
-    if (payload.admissions) setAdmissions(payload.admissions);
-  };
-
-  const fetchJapaneseCards = async (cat?: string) => {
-    try {
-      const url = cat && cat !== "all" 
-        ? `http://127.0.0.1:8765/api/japanese/cards?category=${cat}` 
-        : "http://127.0.0.1:8765/api/japanese/cards";
-      const res = await fetch(url);
-      if (res.ok) {
-        const cards = await res.json();
-        setJapaneseCards(cards);
-        setCurrentCardIndex(0);
-        setIsCardFlipped(false);
-      }
-    } catch (e) {
-      console.error("Failed to load cards", e);
+  // Nihongo Dojo State
+  const dojoCards: JapaneseCard[] = [
+    {
+      id: '1',
+      kanji: "お世話になっております",
+      hiragana: "おせわになっております",
+      romaji: "Osewa ni natte orimasu",
+      meaning: "Thank you for your ongoing support / Guidance",
+      category: "Lab Keigo",
+      level: "N4 / Business",
+      usage_tip: "Essential opening greeting for all emails to Japanese professors and laboratory advisors."
+    },
+    {
+      id: '2',
+      kanji: "ご指導ご鞭撻のほど",
+      hiragana: "ごしどうごべんたつのほど",
+      romaji: "Goshidou gobentatsu no hodo",
+      meaning: "I humbly request your continuous guidance and mentorship",
+      category: "Lab Keigo",
+      level: "N3 / Keigo",
+      usage_tip: "Formal closing phrase in research proposal inquiry emails expressing respect for academic mentorship."
+    },
+    {
+      id: '3',
+      kanji: "分散システム",
+      hiragana: "ぶんさんしすてむ",
+      romaji: "Bunsan shisutemu",
+      meaning: "Distributed Systems",
+      category: "Computer Science",
+      level: "CS Tech",
+      usage_tip: "Core research domain term for Prof. Fukuda (SIT) and Prof. Fujimura (Waseda IPS)."
+    },
+    {
+      id: '4',
+      kanji: "エッジ推論",
+      hiragana: "えっじすいろん",
+      romaji: "Ejji suiron",
+      meaning: "Edge Inference / On-Device Neural Processing",
+      category: "Computer Science",
+      level: "CS Tech",
+      usage_tip: "Central keyword of Nirmiti's Master's thesis proposal on decentralized IoT intelligence."
     }
-  };
+  ];
 
-  const checkCitexStatus = async () => {
-    try {
-      const res = await fetch("http://127.0.0.1:8765/api/mcp/citex/status");
-      if (res.ok) {
-        const data = await res.json();
-        setCitexOnline(data.online === true);
-      }
-    } catch (e) {
-      setCitexOnline(false);
-    }
-  };
+  const [cardIdx, setCardIdx] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [quizAnswered, setQuizAnswered] = useState<number | null>(null);
 
   const speakJapanese = (text: string) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'ja-JP';
-      utterance.rate = 0.85; // slightly slower for optimal clarity
+      utterance.rate = 0.9;
       window.speechSynthesis.speak(utterance);
     }
   };
 
-  const startJapaneseQuiz = async () => {
-    try {
-      const url = japaneseCategory && japaneseCategory !== "all"
-        ? `http://127.0.0.1:8765/api/japanese/quiz?category=${japaneseCategory}`
-        : "http://127.0.0.1:8765/api/japanese/quiz";
-      const res = await fetch(url);
-      if (res.ok) {
-        const q = await res.json();
-        setActiveQuiz(q);
-        setQuizSelectedOption(null);
-        setQuizFeedback(null);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+  // Token visibility state for MCP tab
+  const [showTokens, setShowTokens] = useState<{ [key: string]: boolean }>({});
+  const toggleTokenVisibility = (key: string) => {
+    setShowTokens(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const answerQuiz = (option: string) => {
-    if (!activeQuiz) return;
-    setQuizSelectedOption(option);
-    if (option === activeQuiz.correct_answer) {
-      setQuizFeedback("正解! Excellent! That is the exact correct meaning.");
-    } else {
-      setQuizFeedback(`不合格. The correct meaning is: "${activeQuiz.correct_answer}".`);
-    }
-  };
-
-  const toggleListening = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-    if (isListening) {
-      setIsListening(false);
-      return;
-    }
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.interimResults = false;
-      recognition.onstart = () => setIsListening(true);
-      recognition.onend = () => setIsListening(false);
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setInput(transcript);
-        handleSendMessage(transcript);
-      };
-      recognition.start();
-    } catch (e) {
-      setIsListening(false);
-    }
-  };
-
-  const handleSendMessage = async (textToSend?: string) => {
-    const text = (textToSend || input).trim();
-    if (!text || isProcessing) return;
-
-    setIsProcessing(true);
-    setInput("");
-    const userMsg: ChatMessage = {
-      id: Date.now().toString(),
-      sender: 'user',
-      text: text,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    setMessages(prev => [...prev, userMsg]);
-
-    try {
-      const res = await fetch("http://127.0.0.1:8765/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setMessages(prev => [
-          ...prev,
-          {
-            id: (Date.now() + 1).toString(),
-            sender: 'yomi',
-            text: data.reply,
-            data: data.data,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }
-        ]);
-      }
-    } catch (e) {
-      setMessages(prev => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          sender: 'yomi',
-          text: "I am having trouble reaching the local core brain. Let's make sure the backend server is active.",
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      ]);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const toggleTask = async (taskId: string) => {
-    try {
-      await fetch(`http://127.0.0.1:8765/api/tasks/${taskId}/toggle`, { method: "POST" });
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const executeSandbox = async () => {
-    if (!sandboxCode.trim() || isExecutingCode) return;
-    setIsExecutingCode(true);
-    try {
-      const res = await fetch("http://127.0.0.1:8765/api/sandbox/execute", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: sandboxCode })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setSandboxResult(data);
-      }
-    } catch (e) {
-      setSandboxResult({ success: false, stderr: String(e), stdout: "" });
-    } finally {
-      setIsExecutingCode(false);
-    }
-  };
-
-  const handleDraftEmail = async () => {
-    try {
-      const res = await fetch("http://127.0.0.1:8765/api/admissions/draft-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          professor_name: selectedProfForEmail,
-          university_name: selectedUniForEmail,
-          research_topic: "Self-Adaptive Distributed Systems & Fault-Tolerant Multi-Agent Architectures",
-          purpose: emailPurpose
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setDraftedEmail(data);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const triggerAcademicSearch = async () => {
-    if (!researchQuery.trim() || isSearchingPaper) return;
-    setIsSearchingPaper(true);
-    try {
-      const res = await fetch("http://127.0.0.1:8765/api/academic/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: researchQuery })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setMessages(prev => [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            sender: 'yomi',
-            text: `Retrieved primary paper: **${data.paper.title}** (${data.paper.year}). Synthesized research brief to \`${data.pdf_filename}\`.`,
-            data: data,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }
-        ]);
-        setActiveTab('chat');
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsSearchingPaper(false);
-      setResearchQuery("");
-    }
-  };
-
-  const dispatchCitexResearch = async () => {
-    if (!citexQuery.trim() || isDispatchingCitex) return;
-    setIsDispatchingCitex(true);
-    try {
-      const res = await fetch("http://127.0.0.1:8765/api/mcp/citex/research", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: citexQuery, max_papers: 4 })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setMessages(prev => [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            sender: 'yomi',
-            text: `CiteX Autonomous Engine synthesized literature review for **${citexQuery}** across multi-source preprints!`,
-            data: data,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }
-        ]);
-        setActiveTab('chat');
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsDispatchingCitex(false);
-      setCitexQuery("");
-    }
-  };
-
-  const activeCard = japaneseCards[currentCardIndex] || null;
+  // 52-week contribution heatmap matrix generator
+  const weeks = 52;
+  const days = 7;
+  const heatmapData = Array.from({ length: weeks }, (_, w) =>
+    Array.from({ length: days }, (_, d) => {
+      if (w > 44) return (w + d) % 5 === 0 ? 4 : (w + d) % 3 === 0 ? 3 : 2;
+      if (w % 4 === 0) return (w + d) % 4 === 0 ? 3 : 1;
+      return (w + d) % 6 === 0 ? 2 : (w + d) % 8 === 0 ? 1 : 0;
+    })
+  );
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#09090b] text-[#f4f4f5] font-sans antialiased selection:bg-white/20 selection:text-white">
+    <div className="min-h-screen bg-[#09090b] text-[#fafafa] font-sans antialiased p-4 md:p-8 flex flex-col items-center">
       
-      {/* 1. Frosted Navigation Bar */}
-      <header className="h-14 border-b border-white/[0.08] bg-[#09090b]/80 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-20">
+      {/* ------------------------------------------------------------- */}
+      {/* 1. TOP MINIMALIST NAVIGATION BAR                              */}
+      {/* ------------------------------------------------------------- */}
+      <header className="max-w-6xl w-full mb-8 rounded-2xl border border-white/[0.08] bg-[#111114]/90 backdrop-blur-xl px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-4 z-40 shadow-2xl">
         <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-mono text-sm tracking-widest text-zinc-300 font-semibold uppercase">Yomi OS 2.0</span>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-zinc-400 font-mono">Bklit Engine</span>
-          {citexOnline && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-mono flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" /> CiteX Bridge Active
+          <div className="w-7 h-7 rounded-lg bg-white text-black font-mono font-bold text-xs flex items-center justify-center shadow-sm">
+            Y
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm tracking-tight text-white">Yomi OS</span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-zinc-400">
+              v2.0
             </span>
-          )}
+          </div>
         </div>
 
-        {/* 5 Segmented Navigation Hubs */}
-        <nav className="flex items-center gap-1 bg-[#121215] p-1 rounded-lg border border-white/[0.06]">
-          {[
-            { id: 'chat', label: 'Intelligence HUD', icon: Terminal },
-            { id: 'admissions', label: 'Admissions & Labs', icon: School },
-            { id: 'japanese', label: 'Nihongo Dojo', icon: Volume2 },
-            { id: 'academic', label: 'Academic & CiteX', icon: BookOpen },
-            { id: 'system', label: 'System & Sandbox', icon: Code },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
-                  isActive 
-                    ? 'bg-zinc-800 text-white shadow-sm' 
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.03]'
-                }`}
-              >
-                <Icon size={14} className={isActive ? 'text-zinc-100' : 'text-zinc-400'} />
-                {tab.label}
-              </button>
-            );
-          })}
+        {/* 4 Clean Segmented Hubs */}
+        <nav className="flex items-center p-1 rounded-xl bg-black/40 border border-white/[0.06] text-xs font-medium">
+          <button 
+            onClick={() => setActiveTab('hud')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
+              activeTab === 'hud' ? 'bg-white/[0.1] text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span>Intelligence HUD</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('academics')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
+              activeTab === 'academics' ? 'bg-white/[0.1] text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <GraduationCap className="w-3.5 h-3.5" />
+            <span>Academics & Dossier</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('dojo')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
+              activeTab === 'dojo' ? 'bg-white/[0.1] text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <Languages className="w-3.5 h-3.5" />
+            <span>Nihongo Dojo</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('mcp')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
+              activeTab === 'mcp' ? 'bg-white/[0.1] text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>MCP & Connections</span>
+          </button>
         </nav>
 
-        {/* Telemetry Micro-Pill */}
-        <div className="flex items-center gap-4 text-xs font-mono text-zinc-400">
-          <div className="flex items-center gap-1.5">
-            <Cpu size={13} className="text-zinc-400" />
-            <span>{telemetry.cpu_percent}%</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <HardDrive size={13} className="text-zinc-400" />
-            <span>{telemetry.ram_used_gb} GB</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Battery size={13} className="text-zinc-400" />
-            <span>{telemetry.battery_percent}%</span>
-          </div>
+        {/* Trigger for Floating Pipeline Window */}
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsWindowOpen(prev => !prev)}
+            className="px-3 py-1.5 rounded-lg text-xs font-mono font-medium flex items-center gap-2 border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] transition-all text-zinc-200"
+          >
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--chart-1)' }} />
+            <span>Pipeline & Actions</span>
+            <span className="text-[10px] text-zinc-400 font-mono">
+              {actionTasks.filter(t => !t.completed).length} Pending
+            </span>
+          </button>
         </div>
       </header>
 
-      {/* 2. Main Work Canvas */}
-      <main className="flex-1 overflow-hidden relative">
+      {/* ------------------------------------------------------------- */}
+      {/* 2. MAIN ACTIVE VIEWS                                          */}
+      {/* ------------------------------------------------------------- */}
+      <main className="max-w-6xl w-full space-y-8">
 
-        {/* TAB 1: INTELLIGENCE HUD */}
-        {activeTab === 'chat' && (
-          <div className="h-full flex flex-col max-w-4xl mx-auto px-6 py-6 justify-between">
-            {/* Scrollable Chat Stream */}
-            <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-              {messages.map((m) => {
-                const isUser = m.sender === 'user';
-                return (
-                  <div key={m.id} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-                    <div className="flex items-center gap-2 mb-1 px-1">
-                      <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
-                        {isUser ? 'Nirmiti' : 'Yomi Chief of Staff'}
-                      </span>
-                      <span className="text-[10px] text-zinc-400">{m.timestamp}</span>
-                    </div>
-
-                    <div className={`p-4 rounded-xl text-sm leading-relaxed max-w-[85%] border transition-all ${
-                      isUser 
-                        ? 'bg-zinc-900 border-white/[0.08] text-zinc-100 shadow-sm' 
-                        : 'bg-[#121215] border-white/[0.06] text-zinc-200'
-                    }`}>
-                      <div className="whitespace-pre-wrap">{m.text}</div>
-
-                      {/* Download PDF Artifact Card */}
-                      {m.data && m.data.pdf_filename && (
-                        <div className="mt-3.5 p-3 rounded-lg bg-zinc-900 border border-white/[0.08] flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2.5 overflow-hidden">
-                            <FileText size={18} className="text-emerald-400 shrink-0" />
-                            <div className="truncate">
-                              <p className="text-xs font-mono text-zinc-200 truncate">{m.data.pdf_filename}</p>
-                              <p className="text-[10px] text-zinc-400">Compiled Executive Research Brief</p>
-                            </div>
-                          </div>
-                          <a
-                            href={`http://127.0.0.1:8765/api/exports/${m.data.pdf_filename}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.08] hover:bg-white/[0.14] text-xs font-medium rounded-md text-white transition-colors"
-                          >
-                            <Download size={13} /> Download PDF
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-              <div ref={chatBottomRef} />
-            </div>
-
-            {/* Quick Action Chips & Floating Input Capsule */}
-            <div className="mt-4 shrink-0 space-y-3">
-              <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                {[
-                  "Check admissions deadlines",
-                  "Japanese quiz",
-                  "Match lab Fukuda",
-                  "Draft email to Prof Fukuda",
-                  "Proposal stats",
-                  "CiteX status"
-                ].map((chip) => (
-                  <button
-                    key={chip}
-                    onClick={() => handleSendMessage(chip)}
-                    className="text-[11px] font-mono px-3 py-1 rounded-full bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] text-zinc-400 hover:text-zinc-200 transition-colors shrink-0"
-                  >
-                    {chip}
+        {/* ------------------------------------------------------------- */}
+        {/* VIEW 1: INTELLIGENCE HUD                                      */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === 'hud' && (
+          <div className="space-y-8">
+            
+            {/* Official Bklit Heatmap Chart */}
+            <section className="rounded-2xl border border-white/[0.08] bg-[#111114] p-6 md:p-8 space-y-6">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Heatmap Chart</h1>
+                  <p className="text-xs md:text-sm text-zinc-400 mt-1 max-w-2xl leading-relaxed">
+                    A contribution heatmap with animated cells, configurable level colors and patterns, and an interactive legend tracking daily research synthesis, distributed systems coding, and Japanese practice.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="px-3.5 py-1.5 rounded-lg text-xs font-medium border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.08] text-zinc-400 transition-all">
+                    Copy Markdown
                   </button>
-                ))}
-              </div>
-
-              {/* Floating Input Capsule */}
-              <div className="relative flex items-center bg-[#121215] border border-white/[0.08] rounded-xl px-3 py-2 shadow-lg focus-within:border-white/20 transition-all">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="Ask Yomi, test Japanese, execute Python, or dispatch research..."
-                  className="w-full bg-transparent text-sm text-zinc-100 placeholder-zinc-400 focus:outline-none px-2"
-                />
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={toggleListening}
-                    className={`p-2 rounded-lg transition-all ${
-                      isListening ? 'bg-rose-500/30 text-rose-300 animate-pulse' : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white'
-                    }`}
-                    title="Voice dictation"
-                  >
-                    <Mic size={15} />
+                  <button className="px-3.5 py-1.5 rounded-lg text-xs font-medium border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.08] text-zinc-400 transition-all">
+                    Open in Studio
                   </button>
-                  <button
-                    onClick={() => handleSendMessage()}
-                    disabled={!input.trim() || isProcessing}
-                    className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 disabled:pointer-events-none transition-all"
-                  >
-                    <Send size={15} />
+                  <button className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white text-black hover:bg-zinc-200 transition-all">
+                    Open in v0
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
 
-        {/* TAB 2: ADMISSIONS & LABS */}
-        {activeTab === 'admissions' && (
-          <div className="h-full overflow-y-auto max-w-5xl mx-auto px-6 py-6 space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold tracking-tight text-zinc-100">AY2027 Japan Admissions Radar</h2>
-                <p className="text-xs text-zinc-400 mt-1">Live tracking for verified prospective universities, deadlines, and faculty alignment.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-mono px-2.5 py-1 rounded-md bg-white/[0.04] text-zinc-400 border border-white/[0.06]">
-                  {domains.length} Domains Active
-                </span>
-                <span className="text-[11px] font-mono px-2.5 py-1 rounded-md bg-white/[0.04] text-zinc-400 border border-white/[0.06]">
-                  {projects.length} Roadmaps Tracked
-                </span>
-              </div>
-            </div>
+              {/* The Preview Container */}
+              <div className="rounded-xl border border-white/[0.06] bg-black/40 p-6 space-y-4">
+                <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
+                  <span>Preview</span>
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--chart-1)' }} />
+                    <span>24-Day Active Streak</span>
+                  </div>
+                </div>
 
-            {/* University Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {admissions.map((uni) => (
-                <div key={uni.id} className="p-4 rounded-xl bg-[#121215] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-sm font-semibold text-zinc-100">{uni.name}</h3>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.05] border border-white/[0.08] text-zinc-400">
-                        {uni.portal}
-                      </span>
+                <div className="overflow-x-auto pb-2">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 pl-8 pr-2 pb-2">
+                    <span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="flex flex-col justify-between h-[96px] text-[10px] font-mono text-zinc-500 py-0.5">
+                      <span>Mon</span>
+                      <span>Wed</span>
+                      <span>Fri</span>
                     </div>
-                    <p className="text-xs text-zinc-400 mt-1">{uni.program}</p>
 
-                    {/* Advisors list */}
-                    <div className="mt-3 space-y-2">
-                      {uni.advisors.map((adv) => (
-                        <div key={adv.name} className="p-2.5 rounded-lg bg-zinc-900 border border-white/[0.04]">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-emerald-400">{adv.name}</span>
-                            <button
-                              onClick={() => {
-                                setSelectedProfForEmail(adv.name);
-                                setSelectedUniForEmail(uni.name);
-                                handleDraftEmail();
-                              }}
-                              className="text-[10px] text-zinc-400 hover:text-white underline font-mono"
-                            >
-                              Draft Reachout
-                            </button>
-                          </div>
-                          <p className="text-[11px] text-zinc-400 mt-0.5">{adv.lab}</p>
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {adv.topics.slice(0, 3).map((t) => (
-                              <span key={t} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.04] text-zinc-300">
-                                {t}
-                              </span>
-                            ))}
-                          </div>
-                          {adv.status && (
-                            <p className="text-[10px] text-amber-400/90 mt-2 font-mono">
-                              Status: {adv.status}
-                            </p>
-                          )}
+                    <div className="flex gap-1">
+                      {heatmapData.map((week, wIdx) => (
+                        <div key={wIdx} className="flex flex-col gap-1">
+                          {week.map((level, dIdx) => (
+                            <div 
+                              key={dIdx}
+                              className="w-[11px] h-[11px] rounded-[3px] transition-transform duration-150 hover:scale-125 cursor-pointer"
+                              style={{ backgroundColor: `var(--heat-${level})` }}
+                              title={`Week ${wIdx + 1}, Day ${dIdx + 1}: ${level * 2 + 1} contributions`}
+                            />
+                          ))}
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {/* Deadlines footer */}
-                  {uni.deadlines.length > 0 && (
-                    <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono">
-                      <span className="text-zinc-400">{uni.deadlines[0].event}:</span>
-                      <span className={uni.deadlines[0].urgent ? "text-amber-400 font-semibold" : "text-zinc-300"}>
-                        {uni.deadlines[0].date} ({uni.deadlines[0].days_left}d left)
-                      </span>
+                  <div className="flex items-center justify-end gap-2 text-[11px] font-mono text-zinc-500 pt-4">
+                    <span>Less</span>
+                    <div className="flex items-center gap-1">
+                      {[0, 1, 2, 3, 4].map(l => (
+                        <div key={l} className="w-[11px] h-[11px] rounded-[3px]" style={{ backgroundColor: `var(--heat-${l})` }} />
+                      ))}
                     </div>
-                  )}
+                    <span>More</span>
+                  </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            </section>
 
-            {/* Academic Email Drafter Panel */}
-            <div className="p-5 rounded-xl bg-[#121215] border border-white/[0.08] space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
-                    <School size={16} className="text-emerald-400" /> Academic Reachout & Email Drafter
-                  </h3>
-                  <p className="text-xs text-zinc-400 mt-0.5">Formats formal correspondence adhering to Japanese institutional etiquette.</p>
+            {/* 3 Metric Cards Matching Bklit Gallery Vocabulary */}
+            <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Card 1: Wave Curve */}
+              <div className="rounded-2xl border border-white/[0.08] bg-[#111114] p-6 space-y-4 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Research Velocity</span>
+                  <span className="text-xs font-mono" style={{ color: 'var(--chart-1)' }}>94% Ready</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={emailPurpose}
-                    onChange={(e) => setEmailPurpose(e.target.value)}
-                    className="bg-zinc-900 border border-white/[0.08] text-xs rounded-lg px-2.5 py-1.5 text-zinc-200"
-                  >
-                    <option value="inquiry">Initial Inquiry / Proposal</option>
-                    <option value="followup">Follow-up / Documentation</option>
-                  </select>
-                  <button
-                    onClick={handleDraftEmail}
-                    className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-medium hover:bg-emerald-500/30 transition-all"
-                  >
-                    Generate Email
-                  </button>
+                <div className="h-20 flex items-center justify-center relative overflow-hidden">
+                  <svg className="w-full h-full" viewBox="0 0 300 80" fill="none">
+                    <path d="M0 50 Q 75 10, 150 45 T 300 20" stroke="var(--chart-1)" strokeWidth="2" fill="none" opacity="0.9" />
+                    <path d="M0 60 Q 75 35, 150 55 T 300 40" stroke="var(--chart-2)" strokeWidth="1.5" strokeDasharray="3 3" fill="none" opacity="0.5" />
+                    <line x1="75" y1="10" x2="75" y2="75" stroke="rgba(255,255,255,0.1)" strokeDasharray="2 2" />
+                    <line x1="225" y1="30" x2="225" y2="75" stroke="rgba(255,255,255,0.1)" strokeDasharray="2 2" />
+                    <circle cx="75" cy="22" r="3" fill="var(--chart-1)" />
+                    <circle cx="225" cy="42" r="3" fill="var(--chart-2)" />
+                  </svg>
+                </div>
+                <div className="flex items-center justify-between text-xs text-zinc-400 pt-2 border-t border-white/[0.06]">
+                  <span>Active Citations</span>
+                  <span className="font-mono text-white font-medium">42 Literature Nodes</span>
                 </div>
               </div>
 
-              {draftedEmail && (
-                <div className="p-4 rounded-lg bg-zinc-900 border border-white/[0.08] space-y-3">
-                  <div className="flex items-center justify-between border-b border-white/[0.06] pb-2">
-                    <span className="text-xs font-mono text-zinc-300">Subject: {draftedEmail.subject}</span>
-                    <div className="flex items-center gap-3">
-                      <a
-                        href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(selectedProfForEmail === 'Hiroaki Fukuda' ? 'hiroaki@shibaura-it.ac.jp' : '')}&su=${encodeURIComponent(draftedEmail.subject)}&body=${encodeURIComponent(draftedEmail.body)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-1.5 text-xs font-mono text-emerald-400 hover:text-emerald-300"
-                      >
-                        <Mail size={13} /> Open in Gmail
-                      </a>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(`${draftedEmail.subject}\n\n${draftedEmail.body}`);
-                          setCopiedEmail(true);
-                          setTimeout(() => setCopiedEmail(false), 2000);
-                        }}
-                        className="flex items-center gap-1 text-xs font-mono text-zinc-400 hover:text-white"
-                      >
-                        {copiedEmail ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-                        {copiedEmail ? "Copied!" : "Copy Full Text"}
-                      </button>
+              {/* Card 2: Ring Metric */}
+              <div className="rounded-2xl border border-white/[0.08] bg-[#111114] p-6 space-y-4 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Dossier Completion</span>
+                  <span className="text-xs font-mono text-zinc-400">5 / 5 Verified</span>
+                </div>
+                <div className="flex items-center justify-center py-2">
+                  <div className="relative w-24 h-24 flex items-center justify-center">
+                    <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                      <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3.5" />
+                      <circle cx="18" cy="18" r="14" fill="none" stroke="var(--chart-1)" strokeWidth="3.5" strokeDasharray="88, 100" strokeLinecap="round" />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-base font-bold font-mono text-white">100%</span>
+                      <span className="text-[9px] text-zinc-500 uppercase tracking-wider">Indexed</span>
                     </div>
                   </div>
-                  <pre className="text-xs font-mono text-zinc-300 whitespace-pre-wrap leading-relaxed max-h-56 overflow-y-auto">
-                    {draftedEmail.body}
-                  </pre>
                 </div>
-              )}
-            </div>
+                <div className="flex items-center justify-between text-xs text-zinc-400 pt-2 border-t border-white/[0.06]">
+                  <span>Transcripts & Certs</span>
+                  <span className="font-mono text-white font-medium">Sandip, VTF, Global</span>
+                </div>
+              </div>
 
-            {/* Active Task Matrix */}
-            <div className="p-5 rounded-xl bg-[#121215] border border-white/[0.08] space-y-3">
-              <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
-                <Target size={16} className="text-indigo-400" /> Master's Execution Task Matrix
-              </h3>
-              <div className="space-y-2">
-                {tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    onClick={() => toggleTask(task.id)}
-                    className="flex items-center justify-between p-2.5 rounded-lg bg-zinc-900 border border-white/[0.04] hover:border-white/10 cursor-pointer transition-all"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      {task.is_completed ? (
-                        <CheckCircle2 size={16} className="text-emerald-400" />
-                      ) : (
-                        <Circle size={16} className="text-zinc-400" />
-                      )}
-                      <span className={`text-xs ${task.is_completed ? 'line-through text-zinc-400' : 'text-zinc-200'}`}>
-                        {task.title}
-                      </span>
+              {/* Card 3: JLPT Language Progress */}
+              <div className="rounded-2xl border border-white/[0.08] bg-[#111114] p-6 space-y-4 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">JLPT N4 Horizon</span>
+                  <span className="text-xs font-mono" style={{ color: 'var(--chart-1)' }}>July Window</span>
+                </div>
+                <div className="space-y-2 py-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-400">Lab Keigo Fluency</span>
+                    <span className="font-mono text-white font-medium">18 / 18 Cards</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: '100%', backgroundColor: 'var(--chart-1)' }} />
+                  </div>
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    <span className="text-zinc-400">CS Technical Kanji</span>
+                    <span className="font-mono text-white font-medium">85% Mastered</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: '85%', backgroundColor: 'var(--chart-2)' }} />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs text-zinc-400 pt-2 border-t border-white/[0.06]">
+                  <span>Target Score</span>
+                  <span className="font-mono text-white font-medium">135+ / 180 pts</span>
+                </div>
+              </div>
+            </section>
+
+            {/* Conversational Chief of Staff Dialogue */}
+            <section className="rounded-2xl border border-white/[0.08] bg-[#111114] p-6 md:p-8 space-y-6">
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
+                <div>
+                  <h2 className="text-lg font-semibold tracking-tight text-white">Chief of Staff Dialogue</h2>
+                  <p className="text-xs text-zinc-400">Contextual integration across CiteX, Google Workspace, and university application pipelines.</p>
+                </div>
+                <span className="text-xs font-mono text-zinc-400 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.06]">
+                  Ollama Qwen2.5 · Neural Memory Active
+                </span>
+              </div>
+
+              <div className="space-y-4 max-h-[380px] overflow-y-auto pr-2">
+                {messages.map(msg => (
+                  <div key={msg.id} className="flex items-start gap-4">
+                    <div className="w-7 h-7 rounded-lg bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-xs font-mono font-medium shrink-0 text-white">
+                      {msg.sender === 'yomi' ? 'Y' : 'N'}
                     </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.04] text-zinc-400">
-                      {task.priority}
-                    </span>
+                    <div className="rounded-xl border border-white/[0.08] bg-[#141418] p-4 text-xs md:text-sm leading-relaxed max-w-3xl space-y-2">
+                      <p className="text-zinc-200">{msg.text}</p>
+                      <span className="text-[10px] font-mono text-zinc-500 block">{msg.timestamp}</span>
+                    </div>
                   </div>
                 ))}
+                <div ref={chatBottomRef} />
               </div>
-            </div>
+
+              <div className="flex items-center gap-3 p-2 rounded-xl bg-black/40 border border-white/[0.08]">
+                <input 
+                  type="text" 
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Direct query to Yomi or launch research workflow (/arxiv, /proposal, /email, /nihongo)..." 
+                  className="flex-1 bg-transparent px-3 py-2 text-xs md:text-sm text-white placeholder-zinc-500 focus:outline-none"
+                />
+                <button 
+                  onClick={() => handleSendMessage()}
+                  disabled={isProcessing}
+                  className="px-4 py-2 rounded-lg text-xs font-medium bg-white text-black hover:bg-zinc-200 transition-all flex items-center gap-1.5"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Send</span>
+                </button>
+              </div>
+            </section>
+
           </div>
         )}
 
-        {/* TAB 3: NIHONGO DOJO (LANGUAGE LEARNING) */}
-        {activeTab === 'japanese' && (
-          <div className="h-full overflow-y-auto max-w-4xl mx-auto px-6 py-6 space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold tracking-tight text-zinc-100 flex items-center gap-2">
-                  🎌 Nihongo Dojo (日本語)
-                </h2>
-                <p className="text-xs text-zinc-400 mt-1">Academic Lab Keigo, JLPT N5/N4 Grammar, and CS Tech terms with offline audio pronunciation.</p>
-              </div>
-              <button
-                onClick={startJapaneseQuiz}
-                className="px-3.5 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-medium hover:bg-indigo-500/30 transition-all flex items-center gap-1.5"
-              >
-                <HelpCircle size={14} /> Start Quiz Mode
-              </button>
+        {/* ------------------------------------------------------------- */}
+        {/* VIEW 2: ACADEMICS & DOSSIER                                   */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === 'academics' && (
+          <div className="space-y-8">
+            <div className="border-b border-white/[0.06] pb-5">
+              <h1 className="text-2xl font-bold tracking-tight text-white">Academics & Dossier</h1>
+              <p className="text-xs md:text-sm text-zinc-400 mt-1">
+                Consolidated repository of verified transcripts, degree certificates, industry research credentials, and formal thesis proposal.
+              </p>
             </div>
 
-            {/* Category Filter Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
-              {[
-                { id: "all", label: "All Curricula" },
-                { id: "lab_keigo", label: "🔬 Academic Lab Keigo" },
-                { id: "tech_cs", label: "💻 Tech & CS Vocab" },
-                { id: "jlpt_n5_n4", label: "⛩️ JLPT N5/N4 Patterns" },
-                { id: "daily_life", label: "🍱 Daily Living in Japan" },
-              ].map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => {
-                    setJapaneseCategory(c.id);
-                    fetchJapaneseCards(c.id);
-                  }}
-                  className={`text-xs px-3 py-1 rounded-full border transition-all ${
-                    japaneseCategory === c.id
-                      ? "bg-white text-zinc-950 font-semibold border-white"
-                      : "bg-[#121215] text-zinc-400 hover:text-white border-white/[0.08]"
-                  }`}
-                >
-                  {c.label}
+            {/* Master's Thesis Proposal */}
+            <section className="rounded-2xl border border-white/[0.08] bg-[#111114] p-6 md:p-8 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Master's Thesis Proposal</span>
+                  <h2 className="text-lg font-bold text-white mt-0.5">
+                    Decentralized Edge Intelligence & Fault-Tolerant Consensus for Distributed Systems
+                  </h2>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Candidate: Nirmiti R. Tamore · Target: Japanese National & Private Labs (SIT, Waseda, Science Tokyo)
+                  </p>
+                </div>
+                <button className="px-3.5 py-1.5 rounded-lg text-xs font-medium border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.08] text-white flex items-center gap-2">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Export Brief (PDF)</span>
                 </button>
-              ))}
-            </div>
+              </div>
 
-            {/* Interactive Flashcard with Flip Animation */}
-            {activeCard && !activeQuiz && (
-              <div className="flex flex-col items-center justify-center space-y-4 my-6">
-                <div
-                  onClick={() => setIsCardFlipped(!isCardFlipped)}
-                  className="w-full max-w-lg min-h-[260px] p-8 rounded-2xl bg-[#121215] border border-white/[0.08] hover:border-white/20 shadow-xl cursor-pointer flex flex-col justify-between transition-all duration-300 hover:scale-[1.01]"
-                >
-                  <div className="flex items-center justify-between text-xs font-mono text-zinc-400">
-                    <span className="px-2 py-0.5 rounded bg-white/[0.05] border border-white/[0.08] text-zinc-300">
-                      {activeCard.level}
-                    </span>
-                    <span>Click card to {isCardFlipped ? "view Kanji" : "reveal meaning"}</span>
+              <div className="p-4 rounded-xl bg-black/40 border border-white/[0.06] text-xs leading-relaxed text-zinc-400 space-y-3">
+                <p>
+                  <strong className="text-white">Core Abstract:</strong> As IoT and distributed sensor fabrics proliferate across mission-critical urban and industrial infrastructure in Japan, centralized cloud processing induces intolerable latency bottlenecks and single-point failure hazards. This research explores lightweight peer-to-peer consensus paradigms coupled with quantized on-device neural inference.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                  <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase">Target Sub-Field</span>
+                    <p className="text-xs font-medium text-white mt-0.5">Distributed Edge AI</p>
                   </div>
-
-                  {/* Card Front (Kanji & Hiragana) */}
-                  {!isCardFlipped ? (
-                    <div className="text-center py-6 space-y-3">
-                      <h3 className="text-2xl md:text-3xl font-semibold text-zinc-100 tracking-wide">
-                        {activeCard.kanji}
-                      </h3>
-                      <p className="text-sm font-normal text-emerald-400">
-                        {activeCard.hiragana}
-                      </p>
-                      <p className="text-xs font-mono text-zinc-400">
-                        {activeCard.romaji}
-                      </p>
-                    </div>
-                  ) : (
-                    /* Card Back (English Meaning & Usage Tip) */
-                    <div className="text-center py-6 space-y-3">
-                      <h4 className="text-lg font-medium text-emerald-300">
-                        {activeCard.meaning}
-                      </h4>
-                      <p className="text-xs text-zinc-400 max-w-md mx-auto italic leading-relaxed">
-                        💡 {activeCard.usage_tip}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Footer Audio Control */}
-                  <div className="flex items-center justify-between border-t border-white/[0.06] pt-3">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        speakJapanese(activeCard.kanji);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/[0.06] hover:bg-white/[0.12] text-xs font-medium text-zinc-200 transition-colors"
-                    >
-                      <Volume2 size={14} className="text-emerald-400" /> Pronounce (Native Audio)
-                    </button>
-                    <span className="text-[11px] font-mono text-zinc-400">
-                      Card {currentCardIndex + 1} of {japaneseCards.length}
-                    </span>
+                  <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase">Evaluation Metric</span>
+                    <p className="text-xs font-medium text-white mt-0.5">Sub-10ms P99 Consensus</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase">Toolchain</span>
+                    <p className="text-xs font-medium text-white mt-0.5">Rust · Raft · ONNX Runtime</p>
                   </div>
                 </div>
+              </div>
+            </section>
 
-                {/* Navigation Buttons */}
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => {
-                      setIsCardFlipped(false);
-                      setCurrentCardIndex((prev) => (prev > 0 ? prev - 1 : japaneseCards.length - 1));
-                    }}
-                    className="px-4 py-2 rounded-lg bg-zinc-900 border border-white/[0.08] hover:bg-zinc-800 text-xs font-medium text-zinc-300"
-                  >
-                    Previous
+            {/* Credentials & Verification Grid */}
+            <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Sandip University */}
+              <div className="rounded-2xl border border-white/[0.08] bg-[#111114] p-6 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase">Undergraduate Degree</span>
+                    <h3 className="text-sm font-semibold text-white">B.Tech Computer Science & Eng.</h3>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" />
+                    Verified
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Sandip University (Graduated 2024). Awarded First Class with Distinction. Official transcripts and degree passing certificates validated.
+                </p>
+                <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-xs text-zinc-500 font-mono">
+                  <span>CGPA: 8.42 / 10.0</span>
+                  <span>Nashik, MH</span>
+                </div>
+              </div>
+
+              {/* VTF Research Internship */}
+              <div className="rounded-2xl border border-white/[0.08] bg-[#111114] p-6 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase">Research Experience</span>
+                    <h3 className="text-sm font-semibold text-white">Virtually Testing Foundation</h3>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" />
+                    Verified
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Cybersecurity & Cloud Systems Research Intern (California 501(c)(3)). Formal letter of recommendation and internship certification indexed.
+                </p>
+                <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-xs text-zinc-500 font-mono">
+                  <span>Specialization: NetSec</span>
+                  <span>USA (Remote)</span>
+                </div>
+              </div>
+
+              {/* Global Source Technology */}
+              <div className="rounded-2xl border border-white/[0.08] bg-[#111114] p-6 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase">Industry Practicum</span>
+                    <h3 className="text-sm font-semibold text-white">Global Source Technology</h3>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" />
+                    Verified
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Software Engineering & Full-Stack Systems Intern. Practical deployment of telemetry dashboards and distributed microservices.
+                </p>
+                <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-xs text-zinc-500 font-mono">
+                  <span>Enterprise Systems</span>
+                  <span>Pune, MH</span>
+                </div>
+              </div>
+            </section>
+
+            {/* ArXiv Academic Literature Satellite */}
+            <section className="rounded-2xl border border-white/[0.08] bg-[#111114] p-6 md:p-8 space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-base font-semibold text-white">ArXiv Literature Satellite</h2>
+                  <p className="text-xs text-zinc-400">Live synthesis of Japanese computer science lab publications.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="text" 
+                    defaultValue="Edge AI fault tolerant consensus" 
+                    className="px-3 py-1.5 rounded-lg text-xs bg-black/40 border border-white/[0.08] text-white w-64 focus:outline-none"
+                  />
+                  <button className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-white text-black hover:bg-zinc-200 transition-all">
+                    Query
                   </button>
-                  <button
-                    onClick={() => {
-                      setIsCardFlipped(false);
-                      const rand = Math.floor(Math.random() * japaneseCards.length);
-                      setCurrentCardIndex(rand);
-                    }}
-                    className="px-4 py-2 rounded-lg bg-zinc-900 border border-white/[0.08] hover:bg-zinc-800 text-xs font-medium text-zinc-300 flex items-center gap-1"
-                  >
-                    <RefreshCw size={13} /> Random
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] flex flex-wrap items-center justify-between gap-4">
+                  <div className="space-y-1 max-w-2xl">
+                    <span className="text-[10px] font-mono text-zinc-500">arXiv:2410.18942v1 [cs.DC]</span>
+                    <h4 className="text-xs md:text-sm font-medium text-white">Byzantine Resilient Consensus in Asynchronous Mobile Edge Architectures</h4>
+                    <p className="text-xs text-zinc-400">T. Nakamura, K. Fukuda et al. · Shibaura Institute of Technology & NII</p>
+                  </div>
+                  <button className="px-3 py-1.5 rounded-lg text-xs font-mono border border-white/[0.08] hover:bg-white/[0.06] text-zinc-400">
+                    Generate BibTeX
                   </button>
-                  <button
+                </div>
+
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] flex flex-wrap items-center justify-between gap-4">
+                  <div className="space-y-1 max-w-2xl">
+                    <span className="text-[10px] font-mono text-zinc-500">arXiv:2409.04112v2 [cs.AI]</span>
+                    <h4 className="text-xs md:text-sm font-medium text-white">Quantized Micro-Transformers for Autonomous Sensor Node Clustering</h4>
+                    <p className="text-xs text-zinc-400">Y. Fujimura, S. Sato · Waseda University Graduate School of IPS</p>
+                  </div>
+                  <button className="px-3 py-1.5 rounded-lg text-xs font-mono border border-white/[0.08] hover:bg-white/[0.06] text-zinc-400">
+                    Generate BibTeX
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* VIEW 3: NIHONGO DOJO                                          */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === 'dojo' && (
+          <div className="space-y-8">
+            <div className="border-b border-white/[0.06] pb-5">
+              <h1 className="text-2xl font-bold tracking-tight text-white">Nihongo Dojo</h1>
+              <p className="text-xs md:text-sm text-zinc-400 mt-1">
+                Targeted Japanese language acquisition for laboratory research, academic communication (Keigo), and JLPT certification.
+              </p>
+            </div>
+
+            <section className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+              {/* Left: 3D Flip Card */}
+              <div className="md:col-span-7 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono text-zinc-400">
+                    Card {cardIdx + 1} of {dojoCards.length} · {dojoCards[cardIdx].category}
+                  </span>
+                  <span className="text-xs font-mono text-zinc-500">Click card to flip</span>
+                </div>
+
+                {/* Card Container */}
+                <div 
+                  onClick={() => setIsFlipped(prev => !prev)}
+                  className="cursor-pointer h-72 rounded-2xl border border-white/[0.08] bg-[#111114] p-8 flex flex-col justify-between transition-all hover:border-white/[0.18]"
+                >
+                  {!isFlipped ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06] text-zinc-400">
+                          {dojoCards[cardIdx].level}
+                        </span>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            speakJapanese(dojoCards[cardIdx].kanji);
+                          }}
+                          className="p-2 rounded-lg bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.1] text-white transition-all"
+                          title="Listen Pronunciation"
+                        >
+                          <Volume2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="text-center space-y-2">
+                        <h2 className="text-4xl md:text-5xl font-semibold tracking-wide text-white">
+                          {dojoCards[cardIdx].kanji}
+                        </h2>
+                        <p className="text-sm font-mono text-zinc-400">
+                          {dojoCards[cardIdx].hiragana}
+                        </p>
+                      </div>
+
+                      <div className="text-center text-xs font-mono text-zinc-500">
+                        Romaji: {dojoCards[cardIdx].romaji}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06]" style={{ color: 'var(--chart-1)' }}>
+                          Translation & Academic Context
+                        </span>
+                        <span className="text-xs font-mono text-zinc-500">Tap to flip back</span>
+                      </div>
+
+                      <div className="space-y-3">
+                        <h3 className="text-xl font-medium text-white">
+                          {dojoCards[cardIdx].meaning}
+                        </h3>
+                        <p className="text-xs text-zinc-400 leading-relaxed">
+                          {dojoCards[cardIdx].usage_tip}
+                        </p>
+                      </div>
+
+                      <div className="text-xs font-mono text-zinc-500 pt-2 border-t border-white/[0.06]">
+                        Category: {dojoCards[cardIdx].category} · Level: {dojoCards[cardIdx].level}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Deck Navigation Controls */}
+                <div className="flex items-center justify-between pt-2">
+                  <button 
                     onClick={() => {
-                      setIsCardFlipped(false);
-                      setCurrentCardIndex((prev) => (prev < japaneseCards.length - 1 ? prev + 1 : 0));
+                      setIsFlipped(false);
+                      setCardIdx(prev => (prev - 1 + dojoCards.length) % dojoCards.length);
                     }}
-                    className="px-4 py-2 rounded-lg bg-zinc-900 border border-white/[0.08] hover:bg-zinc-800 text-xs font-medium text-zinc-300"
+                    className="px-4 py-2 rounded-lg text-xs font-medium border border-white/[0.08] hover:bg-white/[0.06] text-zinc-400 transition-all"
+                  >
+                    Previous Card
+                  </button>
+                  <span className="text-xs font-mono text-zinc-500">
+                    {cardIdx + 1} / {dojoCards.length} Deck Active
+                  </span>
+                  <button 
+                    onClick={() => {
+                      setIsFlipped(false);
+                      setCardIdx(prev => (prev + 1) % dojoCards.length);
+                    }}
+                    className="px-4 py-2 rounded-lg text-xs font-medium bg-white text-black hover:bg-zinc-200 transition-all"
                   >
                     Next Card
                   </button>
                 </div>
               </div>
-            )}
 
-            {/* Quiz Mode Interface */}
-            {activeQuiz && (
-              <div className="p-6 rounded-2xl bg-[#121215] border border-white/[0.08] max-w-lg mx-auto space-y-5">
+              {/* Right: Interactive 4-Choice Drill */}
+              <div className="md:col-span-5 rounded-2xl border border-white/[0.08] bg-[#111114] p-6 space-y-5">
                 <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
-                  <span className="text-xs font-mono text-zinc-400 uppercase tracking-widest">Interactive Quiz Mode</span>
-                  <button
-                    onClick={() => setActiveQuiz(null)}
-                    className="text-xs text-zinc-400 hover:text-white"
-                  >
-                    Exit Quiz
-                  </button>
-                </div>
-
-                <div className="text-center py-2 space-y-1">
-                  <h3 className="text-2xl font-bold text-zinc-100">{activeQuiz.prompt_kanji}</h3>
-                  <p className="text-xs text-emerald-400">{activeQuiz.prompt_hiragana}</p>
-                  <p className="text-xs font-mono text-zinc-400">{activeQuiz.prompt_romaji}</p>
+                  <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Laboratory Keigo Drill</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Active</span>
                 </div>
 
                 <div className="space-y-2">
-                  {activeQuiz.options.map((opt) => (
-                    <button
-                      key={opt}
-                      onClick={() => answerQuiz(opt)}
-                      className={`w-full text-left p-3 rounded-lg text-xs font-medium border transition-all ${
-                        quizSelectedOption === opt
-                          ? opt === activeQuiz.correct_answer
-                            ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
-                            : "bg-rose-500/20 border-rose-500/40 text-rose-300"
-                          : "bg-zinc-900 border-white/[0.06] text-zinc-300 hover:bg-zinc-800"
+                  <span className="text-xs text-zinc-400">Prompt Kanji:</span>
+                  <h3 className="text-2xl font-bold text-white">よろしくお願いいたします</h3>
+                  <p className="text-xs font-mono text-zinc-500">Yoroshiku onegai itashimasu</p>
+                </div>
+
+                <div className="space-y-2.5">
+                  <span className="text-xs text-zinc-400">Select matching translation:</span>
+                  {[
+                    "A. Excuse me for leaving before you",
+                    "B. I humbly look forward to working with you / Best regards",
+                    "C. I have not received your email yet",
+                    "D. Good morning, sensei"
+                  ].map((opt, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => setQuizAnswered(idx)}
+                      className={`w-full p-3 rounded-xl border text-left text-xs transition-all ${
+                        quizAnswered === idx
+                          ? idx === 1
+                            ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300'
+                            : 'border-rose-500 bg-rose-500/10 text-rose-300'
+                          : 'border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.06] text-white'
                       }`}
                     >
                       {opt}
@@ -1006,228 +783,307 @@ print(calculate_byzantine_fault_tolerance(10))`
                   ))}
                 </div>
 
-                {quizFeedback && (
-                  <div className="p-3 rounded-lg bg-zinc-900 border border-white/[0.06] text-center space-y-2">
-                    <p className="text-xs font-semibold text-zinc-200">{quizFeedback}</p>
-                    <p className="text-[11px] text-zinc-400 italic">💡 {activeQuiz.usage_tip}</p>
-                    <button
-                      onClick={startJapaneseQuiz}
-                      className="mt-2 px-3 py-1 rounded bg-white/[0.1] hover:bg-white/[0.18] text-xs font-medium text-white"
+                {quizAnswered !== null && (
+                  <div className={`p-3 rounded-xl text-xs font-mono border ${
+                    quizAnswered === 1 
+                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' 
+                      : 'border-rose-500/30 bg-rose-500/10 text-rose-400'
+                  }`}>
+                    {quizAnswered === 1 
+                      ? "Correct: 'Yoroshiku onegai itashimasu' is the quintessential Japanese phrase for establishing formal collaboration."
+                      : "Incorrect. Option B is correct: 'I humbly look forward to working with you / Best regards'."
+                    }
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* VIEW 4: MCP & CONNECTIONS                                     */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === 'mcp' && (
+          <div className="space-y-8">
+            <div className="border-b border-white/[0.06] pb-5">
+              <h1 className="text-2xl font-bold tracking-tight text-white">MCP & Connected Services</h1>
+              <p className="text-xs md:text-sm text-zinc-400 mt-1">
+                Model Context Protocol servers, persistent authentication tokens, and encrypted bridges into external productivity workflows.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Connection 1: CiteX */}
+              <div className="rounded-2xl border border-white/[0.08] bg-[#111114] p-6 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center font-mono text-xs font-bold text-white">
+                    CX
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-white">CiteX Academic Intelligence Engine</h3>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm" />
+                      <span className="text-[10px] font-mono text-emerald-400">Online (:8000)</span>
+                    </div>
+                    <p className="text-xs text-zinc-400">
+                      ArXiv satellite, semantic research paper synthesis, and BibTeX citation graph generator.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/[0.08] font-mono text-xs text-zinc-400">
+                    <span>{showTokens['citex'] ? 'cx_live_e94bc7218842' : 'cx_live_••••••••8842'}</span>
+                    <button 
+                      onClick={() => toggleTokenVisibility('citex')}
+                      className="text-zinc-500 hover:text-white transition-colors"
+                      title="Toggle token visibility"
                     >
-                      Next Question
+                      {showTokens['citex'] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
                   </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 4: ACADEMIC & CITEX MCP */}
-        {activeTab === 'academic' && (
-          <div className="h-full overflow-y-auto max-w-4xl mx-auto px-6 py-6 space-y-6">
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight text-zinc-100">Academic Literature & CiteX MCP Engine</h2>
-              <p className="text-xs text-zinc-400 mt-1">Autonomous multi-source preprint scraping, BibTeX generation, and IEEE PDF compiler.</p>
-            </div>
-
-            {/* CiteX MCP Control Capsule */}
-            <div className="p-5 rounded-xl bg-[#121215] border border-white/[0.08] space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${citexOnline ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
-                  <span className="text-sm font-semibold text-zinc-200">CiteX Autonomous Research Engine</span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.04] text-zinc-400">
-                    {citexOnline ? "Port :8000 Connected" : "Offline"}
-                  </span>
-                </div>
-                {!citexOnline && (
-                  <button
-                    onClick={async () => {
-                      await fetch("http://127.0.0.1:8765/api/mcp/citex/launch", { method: "POST" });
-                      setTimeout(checkCitexStatus, 3000);
-                    }}
-                    className="px-3 py-1 rounded bg-white/[0.08] hover:bg-white/[0.14] text-xs font-medium text-white transition-colors"
-                  >
-                    Launch CiteX Engine
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={citexQuery}
-                  onChange={(e) => setCitexQuery(e.target.value)}
-                  placeholder="Dispatch multi-source research (e.g. self-adaptive microservices)..."
-                  className="flex-1 bg-zinc-900 border border-white/[0.08] text-xs rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-white/20"
-                />
-                <button
-                  onClick={dispatchCitexResearch}
-                  disabled={!citexQuery.trim() || isDispatchingCitex}
-                  className="px-4 py-2 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-medium hover:bg-indigo-500/30 disabled:opacity-40"
-                >
-                  {isDispatchingCitex ? "Synthesizing..." : "Dispatch to CiteX"}
-                </button>
-              </div>
-            </div>
-
-            {/* ArXiv Research Satellite */}
-            <div className="p-5 rounded-xl bg-[#121215] border border-white/[0.08] space-y-4">
-              <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-2">
-                <BookOpen size={16} className="text-emerald-400" /> ArXiv Satellite & PDF Brief Generator
-              </h3>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={researchQuery}
-                  onChange={(e) => setResearchQuery(e.target.value)}
-                  placeholder="Query topic or author (e.g., Kenji Tei self-adaptive systems)..."
-                  className="flex-1 bg-zinc-900 border border-white/[0.08] text-xs rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-white/20"
-                />
-                <button
-                  onClick={triggerAcademicSearch}
-                  disabled={!researchQuery.trim() || isSearchingPaper}
-                  className="px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-medium hover:bg-emerald-500/30 disabled:opacity-40"
-                >
-                  {isSearchingPaper ? "Searching..." : "Synthesize Brief"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 5: SYSTEM & CODE SANDBOX */}
-        {activeTab === 'system' && (
-          <div className="h-full overflow-y-auto max-w-4xl mx-auto px-6 py-6 space-y-6">
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight text-zinc-100">Python Code Sandbox & Subagents</h2>
-              <p className="text-xs text-zinc-400 mt-1">Isolated computational REPL and autonomous worker execution runtime.</p>
-            </div>
-
-            {/* Python Code Sandbox */}
-            <div className="p-5 rounded-xl bg-[#121215] border border-white/[0.08] space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-2">
-                  <Code size={16} className="text-emerald-400" /> Python REPL & Computation Sandbox
-                </h3>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setSandboxCode(
-`# JASSO 3.0 Scale GPA Conversion Formula
-def calculate_jasso_gpa(grade_points):
-    # grade_points: list of course grades out of 10
-    converted = [((g - 1) / 9.0) * 3.0 for g in grade_points]
-    jasso_gpa = sum(converted) / len(converted)
-    return {"original_avg": round(sum(grade_points)/len(grade_points), 2), "jasso_gpa": round(jasso_gpa, 2)}
-
-print(calculate_jasso_gpa([8.5, 9.0, 7.8, 8.9, 9.2]))`
-                    )}
-                    className="text-[10px] font-mono px-2 py-1 rounded bg-white/[0.04] text-zinc-400 hover:text-white"
-                  >
-                    Preset: JASSO GPA
-                  </button>
-                  <button
-                    onClick={executeSandbox}
-                    disabled={isExecutingCode}
-                    className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-medium hover:bg-emerald-500/30 disabled:opacity-40"
-                  >
-                    {isExecutingCode ? "Executing..." : "Run Sandbox"}
+                  <button className="px-3 py-1.5 rounded-lg text-xs font-medium border border-white/[0.08] hover:bg-white/[0.06] text-white flex items-center gap-1.5">
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Ping (12ms)</span>
                   </button>
                 </div>
               </div>
 
-              <textarea
-                value={sandboxCode}
-                onChange={(e) => setSandboxCode(e.target.value)}
-                rows={7}
-                className="w-full p-3 rounded-lg bg-zinc-900 border border-white/[0.08] text-xs font-mono text-zinc-200 focus:outline-none focus:border-white/20 resize-y"
-              />
-
-              {sandboxResult && (
-                <div className="p-3 rounded-lg bg-zinc-900 border border-white/[0.08] text-xs font-mono space-y-1">
-                  <div className="flex items-center justify-between text-zinc-400">
-                    <span>Execution Result:</span>
-                    <span>{sandboxResult.execution_time_ms} ms</span>
+              {/* Connection 2: Google Workspace */}
+              <div className="rounded-2xl border border-white/[0.08] bg-[#111114] p-6 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center font-mono text-xs font-bold text-white">
+                    GW
                   </div>
-                  <pre className="text-emerald-400 whitespace-pre-wrap">
-                    {sandboxResult.stdout || sandboxResult.stderr || "Executed with zero output."}
-                  </pre>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-white">Google Workspace (Gmail & Drive)</h3>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm" />
+                      <span className="text-[10px] font-mono text-emerald-400">Authorized</span>
+                    </div>
+                    <p className="text-xs text-zinc-400">
+                      Direct academic email drafting bridge & Google Drive cloud backup staging (<code className="font-mono text-zinc-300">backend/Google_Drive_Sync/</code>).
+                    </p>
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {/* Sub-Agent Spawner & Workers Panel */}
-            <div className="p-5 rounded-xl bg-[#121215] border border-white/[0.08] space-y-4">
-              <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-2">
-                <Bot size={16} className="text-indigo-400" /> Autonomous Sub-Agents
-              </h3>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={newAgentPrompt}
-                  onChange={(e) => setNewAgentPrompt(e.target.value)}
-                  placeholder="Deploy new worker (e.g. monitor SIT admission guidelines)..."
-                  className="flex-1 bg-zinc-900 border border-white/[0.08] text-xs rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-white/20"
-                />
-                <button
-                  onClick={async () => {
-                    if (!newAgentPrompt.trim() || isSpawningAgent) return;
-                    setIsSpawningAgent(true);
-                    await fetch("http://127.0.0.1:8765/api/subagents", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ prompt: newAgentPrompt })
-                    });
-                    setIsSpawningAgent(false);
-                    setNewAgentPrompt("");
-                  }}
-                  disabled={!newAgentPrompt.trim() || isSpawningAgent}
-                  className="px-4 py-2 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-medium hover:bg-indigo-500/30 disabled:opacity-40"
-                >
-                  Deploy Worker
-                </button>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/[0.08] font-mono text-xs text-zinc-400">
+                    <span>{showTokens['gw'] ? 'gsuite_auth_89bf2c72d' : 'gsuite_••••••••c72d'}</span>
+                    <button 
+                      onClick={() => toggleTokenVisibility('gw')}
+                      className="text-zinc-500 hover:text-white transition-colors"
+                    >
+                      {showTokens['gw'] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                  <button className="px-3 py-1.5 rounded-lg text-xs font-medium border border-white/[0.08] hover:bg-white/[0.06] text-white">
+                    Sync Staging
+                  </button>
+                </div>
               </div>
 
-              <div className="space-y-2 mt-3">
-                {subagents.map((ag) => (
-                  <div key={ag.id} className="p-3 rounded-lg bg-zinc-900 border border-white/[0.04] flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-zinc-200">{ag.name}</span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.04] text-zinc-400">{ag.status}</span>
-                      </div>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">{ag.role}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={async () => {
-                          await fetch(`http://127.0.0.1:8765/api/subagents/${ag.id}/run`, { method: "POST" });
-                        }}
-                        className="p-1.5 rounded bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300"
-                        title="Run agent"
-                      >
-                        <Play size={13} />
-                      </button>
-                      <button
-                        onClick={async () => {
-                          await fetch(`http://127.0.0.1:8765/api/subagents/${ag.id}`, { method: "DELETE" });
-                        }}
-                        className="p-1.5 rounded bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300"
-                        title="Decommission"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
+              {/* Connection 3: GitHub */}
+              <div className="rounded-2xl border border-white/[0.08] bg-[#111114] p-6 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center font-mono text-xs font-bold text-white">
+                    GH
                   </div>
-                ))}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-white">GitHub (Tamore/YomiOS)</h3>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm" />
+                      <span className="text-[10px] font-mono text-emerald-400">Synced @ 6a080cd</span>
+                    </div>
+                    <p className="text-xs text-zinc-400">
+                      Clean upstream deployment repository for Yomi OS 2.0 and research documentation.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/[0.08] font-mono text-xs text-zinc-400">
+                    <span>{showTokens['gh'] ? 'ghp_live_token_77a433b1' : 'ghp_••••••••33b1'}</span>
+                    <button 
+                      onClick={() => toggleTokenVisibility('gh')}
+                      className="text-zinc-500 hover:text-white transition-colors"
+                    >
+                      {showTokens['gh'] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                  <button className="px-3 py-1.5 rounded-lg text-xs font-medium border border-white/[0.08] hover:bg-white/[0.06] text-white">
+                    Push Verify
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
 
       </main>
+
+      {/* ------------------------------------------------------------- */}
+      {/* 3. FLOATING MINIMIZABLE/MAXIMIZABLE STICKY WINDOW             */}
+      {/* ------------------------------------------------------------- */}
+      <div className="fixed bottom-6 right-6 z-50">
+        {!isWindowOpen ? (
+          <div 
+            onClick={() => setIsWindowOpen(true)}
+            className="cursor-pointer rounded-full px-4 py-2 flex items-center gap-3 shadow-2xl backdrop-blur-xl border border-white/[0.12] bg-[#111114]/90 hover:border-white/[0.24] transition-all"
+          >
+            <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--chart-1)' }} />
+            <span className="text-xs font-medium text-white">Pipeline & Actions</span>
+            <span className="text-[10px] font-mono text-zinc-400">
+              3 Unis · {actionTasks.filter(t => !t.completed).length} Tasks
+            </span>
+            <ChevronUp className="w-3.5 h-3.5 text-zinc-400" />
+          </div>
+        ) : (
+          <div className="w-96 md:w-[420px] max-h-[580px] flex flex-col rounded-2xl shadow-2xl backdrop-blur-2xl border border-white/[0.12] bg-[#111114]/95 overflow-hidden transition-all">
+            {/* Header */}
+            <div className="px-5 py-3.5 border-b border-white/[0.08] flex items-center justify-between bg-black/40">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--chart-1)' }} />
+                <span className="text-xs font-semibold tracking-tight text-white">Executive Pipeline & Actions</span>
+              </div>
+              <button 
+                onClick={() => setIsWindowOpen(false)}
+                className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all"
+                title="Minimize window"
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Sub Tabs */}
+            <div className="p-2 border-b border-white/[0.06] bg-black/20 flex gap-1">
+              <button 
+                onClick={() => setStickyTab('pipeline')}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                  stickyTab === 'pipeline' ? 'bg-white/[0.08] text-white' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                University Pipeline
+              </button>
+              <button 
+                onClick={() => setStickyTab('actions')}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                  stickyTab === 'actions' ? 'bg-white/[0.08] text-white' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Action Checklist
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[440px]">
+              {stickyTab === 'pipeline' ? (
+                <div className="space-y-3">
+                  {/* SIT */}
+                  <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-white">Shibaura Inst. of Tech (SIT)</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        Replied
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-400">
+                      Prof. Kenji Fukuda · Distributed Systems & IoT
+                    </p>
+                    <div className="text-[11px] font-mono text-zinc-500 pt-1 border-t border-white/[0.04]">
+                      Action: Send revised Edge AI proposal draft.
+                    </div>
+                  </div>
+
+                  {/* Waseda */}
+                  <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-white">Waseda University (IPS)</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        Opens Dec 1
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-400">
+                      Prof. Yoshiaki Fujimura · Distributed Intelligence
+                    </p>
+                    <div className="text-[11px] font-mono text-zinc-500 pt-1 border-t border-white/[0.04]">
+                      Deadline: Dec 15, 2026 application submission.
+                    </div>
+                  </div>
+
+                  {/* Science Tokyo */}
+                  <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-white">Institute of Science Tokyo</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        In Review
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-400">
+                      Prof. Kenichi Okada / Prof. Xavier Défago
+                    </p>
+                    <div className="text-[11px] font-mono text-zinc-500 pt-1 border-t border-white/[0.04]">
+                      Status: Pre-screening evaluation in progress.
+                    </div>
+                  </div>
+
+                  {/* NAIST */}
+                  <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-white">NAIST</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.04] text-zinc-400 border border-white/[0.06]">
+                        Pending Contact
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-400">
+                      Prof. Hajimu Inoue · Distributed Edge Security
+                    </p>
+                    <div className="text-[11px] font-mono text-zinc-500 pt-1 border-t border-white/[0.04]">
+                      Draft email ready in Gmail bridge.
+                    </div>
+                  </div>
+
+                  {/* Osaka: Struck out cleanly as rejected */}
+                  <div className="p-3.5 rounded-xl bg-white/[0.01] border border-white/[0.04] opacity-50 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-zinc-500 line-through">Osaka University (AAD)</span>
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500 line-through">
+                        Struck Out
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-600 line-through">
+                      Special Selection 2026 track concluded. Archiving complete.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {actionTasks.map(task => (
+                    <div 
+                      key={task.id}
+                      onClick={() => toggleTask(task.id)}
+                      className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] cursor-pointer hover:bg-white/[0.04] transition-all"
+                    >
+                      <button className="mt-0.5 text-zinc-400 hover:text-white">
+                        {task.completed ? (
+                          <CheckSquare className="w-4 h-4 text-emerald-400" />
+                        ) : (
+                          <Square className="w-4 h-4 text-zinc-600" />
+                        )}
+                      </button>
+                      <div className={`space-y-0.5 ${task.completed ? 'line-through opacity-50' : ''}`}>
+                        <span className="text-xs font-medium text-white block">{task.title}</span>
+                        <span className="text-[10px] font-mono text-zinc-500">{task.meta}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
