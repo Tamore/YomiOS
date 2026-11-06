@@ -34,18 +34,18 @@ interface TaskItem {
 export default function App() {
   const [activeTab, setActiveTab] = useState<'hud' | 'academics' | 'dojo' | 'mcp'>('hud');
 
-  // Sticky Floating Window State
-  const [isWindowOpen, setIsWindowOpen] = useState(true);
+  // Sticky Floating Window starts MINIMIZED by default so it never blocks the view
+  const [isWindowOpen, setIsWindowOpen] = useState(false);
   const [stickyTab, setStickyTab] = useState<'pipeline' | 'actions'>('pipeline');
 
-  // Pipeline tasks
+  // Generic & modular pipeline tasks
   const [actionTasks, setActionTasks] = useState<TaskItem[]>([
-    { id: '1', title: 'Send revised Edge AI proposal to Prof. Fukuda (SIT)', meta: 'Address telemetry synchronization feedback', completed: false },
-    { id: '2', title: 'Prepare Waseda IPS application package', meta: 'Window opens December 1, 2026', completed: false },
-    { id: '3', title: 'Master 18 Laboratory Keigo flashcards', meta: 'Nihongo Dojo drill sequence', completed: false },
-    { id: '4', title: 'Science Tokyo portal review check', meta: 'Evaluation in progress', completed: false },
-    { id: '5', title: 'Verify Sandip University First Class Distinction transcripts', meta: 'Dossier indexed', completed: true },
-    { id: '6', title: 'Archive VTF & Global Source industry certs', meta: 'PDF verified', completed: true },
+    { id: '1', title: 'Synthesize Edge AI distributed consensus telemetry', meta: 'Address latency synchronization benchmarks', completed: false },
+    { id: '2', title: 'Prepare Graduate Admissions dossier & statement of purpose', meta: 'Target submission window December 2026', completed: false },
+    { id: '3', title: 'Master 18 Laboratory Keigo academic interaction cards', meta: 'Nihongo Dojo drill sequence', completed: false },
+    { id: '4', title: 'Pre-screening research evaluation tracking', meta: 'Evaluation in progress', completed: false },
+    { id: '5', title: 'Verify B.Tech Computer Science & Engineering degree credentials', meta: 'First Class with Distinction dossier indexed', completed: true },
+    { id: '6', title: 'Archive Systems & Security Research certifications', meta: 'Verified cryptographic credential bundle', completed: true },
   ]);
 
   const toggleTask = (id: string) => {
@@ -85,10 +85,10 @@ export default function App() {
     setIsProcessing(true);
 
     try {
-      const res = await fetch("http://localhost:8080/api/chat", {
+      const res = await fetch("http://127.0.0.1:8765/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: textToSend, user_name: "Nirmiti" })
+        body: JSON.stringify({ message: textToSend, user_name: "Candidate" })
       });
 
       if (!res.ok) throw new Error("Backend offline");
@@ -105,7 +105,7 @@ export default function App() {
         setMessages(prev => [...prev, {
           id: (Date.now() + 1).toString(),
           sender: 'yomi',
-          text: `Query processed. Verified your Sandip University First Class Distinction B.Tech CSE transcripts, VTF Research Intern certification, and Global Source practicum. Active admissions pipeline holds 3 prospective tracks: SIT (Prof. Fukuda), Waseda IPS (Prof. Fujimura), and Science Tokyo.`,
+          text: `Query processed. Verified your First Class Distinction B.Tech CSE degree credentials, Systems Research Fellowship, and Enterprise Engineering practicum. Active admissions pipeline holds 3 prospective research tracks in Distributed Systems, Edge AI, and Fault-Tolerant Consensus.`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }]);
       }, 500);
@@ -124,17 +124,17 @@ export default function App() {
       meaning: "Thank you for your ongoing support / Guidance",
       category: "Lab Keigo",
       level: "N4 / Business",
-      usage_tip: "Essential opening greeting for all emails to Japanese professors and laboratory advisors."
+      usage_tip: "Essential opening greeting for formal correspondence to laboratory professors and academic mentors."
     },
     {
       id: '2',
       kanji: "ご指導ご鞭撻のほど",
       hiragana: "ごしどうごべんたつのほど",
       romaji: "Goshidou gobentatsu no hodo",
-      meaning: "I humbly request your continuous guidance and mentorship",
+      meaning: "I humbly request your continuous mentorship and guidance",
       category: "Lab Keigo",
       level: "N3 / Keigo",
-      usage_tip: "Formal closing phrase in research proposal inquiry emails expressing respect for academic mentorship."
+      usage_tip: "Formal closing phrase in research proposal inquiries expressing profound respect for laboratory mentorship."
     },
     {
       id: '3',
@@ -144,7 +144,7 @@ export default function App() {
       meaning: "Distributed Systems",
       category: "Computer Science",
       level: "CS Tech",
-      usage_tip: "Core research domain term for Prof. Fukuda (SIT) and Prof. Fujimura (Waseda IPS)."
+      usage_tip: "Core research domain term for distributed architectures, consensus protocols, and edge compute clusters."
     },
     {
       id: '4',
@@ -154,7 +154,7 @@ export default function App() {
       meaning: "Edge Inference / On-Device Neural Processing",
       category: "Computer Science",
       level: "CS Tech",
-      usage_tip: "Central keyword of Nirmiti's Master's thesis proposal on decentralized IoT intelligence."
+      usage_tip: "Primary technical keyword for lightweight on-device AI models running on edge accelerators."
     }
   ];
 
@@ -186,14 +186,14 @@ export default function App() {
     'JLPT N4 Kanji & Grammar Drill (Anki deck 24 cards)',
     'Edge AI Latency profiling on Jetson Orin Nano',
     'ArXiv reading: Decentralized LLM Edge Consensus',
-    'SIT Prof. Kenji Fukuda email follow-up draft',
-    'Waseda IPS research proposal methodology section',
-    'Science Tokyo statement of purpose refinement',
-    'Distributed systems raft replication benchmark in Go',
+    'Laboratory correspondence and research draft follow-up',
+    'Graduate research proposal methodology refinement',
+    'Pre-screening statement of purpose review',
+    'Distributed systems Raft replication benchmark in Go',
     'Laboratory Keigo conversation practice'
   ];
 
-  // Deterministic realistic 52-week activity distribution with 24-day active streak ending today
+  // Deterministic 52-week activity distribution with 24-day active streak ending today
   const heatmapData = useMemo(() => {
     let seed = 42;
     const pseudoRandom = () => {
@@ -211,12 +211,10 @@ export default function App() {
         let count = 0;
 
         if (daysFromEnd < 24) {
-          // Intense active streak ending today
           const r = pseudoRandom();
           level = r > 0.65 ? '05' : (r > 0.3 ? '04' : '03');
           count = level === '05' ? Math.floor(r * 4) + 6 : (level === '04' ? 4 : 3);
         } else {
-          // Historical months: natural organic clusters (sprints, rest periods)
           const sprintFactor = Math.sin(w / 3.2) * 0.5 + 0.5;
           const r = pseudoRandom();
           if (r < 0.46) {
@@ -244,13 +242,13 @@ export default function App() {
     <div className="min-h-screen bg-[#09090b] text-[#f5f5f5] font-sans antialiased p-4 md:p-8 flex flex-col items-center">
       
       {/* ------------------------------------------------------------- */}
-      {/* 1. BKLIT SITE RAILS & TOP CHROME (from bklit-ui repo)         */}
+      {/* 1. TOP CHROME & NAVIGATION (Bklit Container & Frame)          */}
       {/* ------------------------------------------------------------- */}
-      <div className="w-full max-w-[1280px] relative mb-8">
-        <header className="relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07]">
-          <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] py-3 px-5 flex flex-wrap items-center justify-between gap-4">
+      <div className="bklit-container mb-8">
+        <header className="bklit-frame">
+          <div className="bklit-frame-panel py-3 px-5 flex flex-wrap items-center justify-between gap-4">
             
-            {/* Custom Yomi Brandmark & Typography */}
+            {/* Custom Yomi Brandmark (Option 3: Cyber-Kamon Diamond) */}
             <div className="flex items-center gap-3">
               <svg 
                 className="w-5 h-5 shrink-0" 
@@ -271,16 +269,13 @@ export default function App() {
                   </linearGradient>
                 </defs>
 
-                {/* Top Left Diamond Facet (Perception / 読み) */}
+                {/* Top Left Diamond Facet */}
                 <polygon points="16,4 7,13 13,13 16,10" fill="url(#yomi-kamon-white)" />
-                
-                {/* Top Right Diamond Facet (Synthesis & Cognition) */}
+                {/* Top Right Diamond Facet */}
                 <polygon points="16,4 25,13 19,13 16,10" fill="#ffffff" fillOpacity="0.45" />
-
-                {/* Lower Keel Diamond (Action & Execution in Rose) */}
+                {/* Lower Keel Diamond */}
                 <polygon points="16,13 21,18 16,28 11,18" fill="url(#yomi-kamon-rose)" />
-
-                {/* Architectural Negative Space Core */}
+                {/* Core Architecture */}
                 <polygon points="16,7 13.5,11.5 18.5,11.5" fill="#0e0e11" />
               </svg>
               <div className="flex items-center gap-2">
@@ -291,8 +286,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* 4 Clean Segmented Hubs */}
-            <nav className="flex items-center p-1 rounded-xl bg-black/40 border border-white/[0.06] text-xs font-medium">
+            {/* Segmented Hubs */}
+            <nav className="flex items-center p-1 rounded-xl bg-black/40 border border-white/[0.06] text-xs font-medium gap-1">
               <button 
                 onClick={() => setActiveTab('hud')}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
@@ -336,9 +331,9 @@ export default function App() {
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* 2. MAIN ACTIVE VIEWS (in Bklit Frame/FramePanel containers)   */}
+      {/* 2. MAIN ACTIVE VIEWS                                          */}
       {/* ------------------------------------------------------------- */}
-      <main className="w-full max-w-[1280px] space-y-8 pb-20">
+      <main className="bklit-container space-y-8 pb-20">
 
         {/* ------------------------------------------------------------- */}
         {/* VIEW 1: INTELLIGENCE HUD                                      */}
@@ -346,9 +341,9 @@ export default function App() {
         {activeTab === 'hud' && (
           <div className="space-y-8">
             
-            {/* Authentic Bklit Activity & Habit Heatmap Frame */}
-            <section className="relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07]">
-              <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] p-6 md:p-8 space-y-6">
+            {/* Activity & Habit Heatmap Frame */}
+            <section className="bklit-frame">
+              <div className="bklit-frame-panel space-y-6">
                 
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
@@ -363,36 +358,36 @@ export default function App() {
                     </p>
                   </div>
                   
-                  {/* Real Workflow Filter Pills */}
-                  <div className="flex items-center p-1 rounded-xl bg-black/40 border border-white/[0.06] text-xs font-medium">
+                  {/* Spaced Workflow Filter Pills */}
+                  <div className="flex items-center p-1 rounded-xl bg-black/40 border border-white/[0.08] text-xs font-medium gap-1.5">
                     <button 
                       onClick={() => setHeatmapFilter('all')}
-                      className={`px-3 py-1 rounded-lg transition-colors ${heatmapFilter === 'all' ? 'text-white bg-white/[0.1] shadow-xs' : 'text-zinc-400 hover:text-white'}`}
+                      className={`px-3 py-1 rounded-lg transition-colors ${heatmapFilter === 'all' ? 'text-white bg-white/[0.12] shadow-xs' : 'text-zinc-400 hover:text-white'}`}
                     >
                       All Workflows
                     </button>
                     <button 
                       onClick={() => setHeatmapFilter('dojo')}
-                      className={`px-3 py-1 rounded-lg transition-colors ${heatmapFilter === 'dojo' ? 'text-white bg-white/[0.1] shadow-xs' : 'text-zinc-400 hover:text-white'}`}
+                      className={`px-3 py-1 rounded-lg transition-colors ${heatmapFilter === 'dojo' ? 'text-white bg-white/[0.12] shadow-xs' : 'text-zinc-400 hover:text-white'}`}
                     >
                       Japanese Dojo
                     </button>
                     <button 
                       onClick={() => setHeatmapFilter('research')}
-                      className={`px-3 py-1 rounded-lg transition-colors ${heatmapFilter === 'research' ? 'text-white bg-white/[0.1] shadow-xs' : 'text-zinc-400 hover:text-white'}`}
+                      className={`px-3 py-1 rounded-lg transition-colors ${heatmapFilter === 'research' ? 'text-white bg-white/[0.12] shadow-xs' : 'text-zinc-400 hover:text-white'}`}
                     >
                       Research & Thesis
                     </button>
                     <button 
                       onClick={() => setHeatmapFilter('admissions')}
-                      className={`px-3 py-1 rounded-lg transition-colors ${heatmapFilter === 'admissions' ? 'text-white bg-white/[0.1] shadow-xs' : 'text-zinc-400 hover:text-white'}`}
+                      className={`px-3 py-1 rounded-lg transition-colors ${heatmapFilter === 'admissions' ? 'text-white bg-white/[0.12] shadow-xs' : 'text-zinc-400 hover:text-white'}`}
                     >
                       Admissions
                     </button>
                   </div>
                 </div>
 
-                {/* Heatmap Container */}
+                {/* Heatmap Matrix */}
                 <div className="rounded-xl border border-white/[0.08] bg-[#09090b] p-6 space-y-4">
                   <div className="flex items-center justify-between text-xs font-mono">
                     <div className="flex items-center gap-2">
@@ -437,7 +432,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Bottom Legend using Bklit sequential scale tokens */}
+                    {/* Bottom Legend */}
                     <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 pt-4 border-t border-white/[0.04]">
                       <span className="text-zinc-400">
                         {hoveredCell ? (
@@ -468,12 +463,12 @@ export default function App() {
               </div>
             </section>
 
-            {/* 3 Metric Cards Matching Bklit Showcase */}
+            {/* 3 Showcase Metric Cards */}
             <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
               
               {/* Card 1: Wave Curve */}
-              <div className="relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07]">
-                <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] p-6 space-y-4 flex flex-col justify-between h-full">
+              <div className="bklit-frame">
+                <div className="bklit-frame-panel flex flex-col justify-between h-full space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Research Velocity</span>
                     <span className="text-xs font-mono font-medium" style={{ color: 'var(--chart-1)' }}>94% Ready</span>
@@ -496,8 +491,8 @@ export default function App() {
               </div>
 
               {/* Card 2: Ring Metric */}
-              <div className="relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07]">
-                <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] p-6 space-y-4 flex flex-col justify-between h-full">
+              <div className="bklit-frame">
+                <div className="bklit-frame-panel flex flex-col justify-between h-full space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Dossier Completion</span>
                     <span className="text-xs font-mono text-zinc-400">5 / 5 Verified</span>
@@ -515,15 +510,15 @@ export default function App() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-xs text-zinc-400 pt-2 border-t border-white/[0.06]">
-                    <span>Transcripts & Certs</span>
-                    <span className="font-mono text-white font-medium">Sandip, VTF, Global</span>
+                    <span>Verified Dossier</span>
+                    <span className="font-mono text-white font-medium">Transcripts & Certs</span>
                   </div>
                 </div>
               </div>
 
               {/* Card 3: JLPT Language Progress */}
-              <div className="relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07]">
-                <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] p-6 space-y-4 flex flex-col justify-between h-full">
+              <div className="bklit-frame">
+                <div className="bklit-frame-panel flex flex-col justify-between h-full space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">JLPT N4 Horizon</span>
                     <span className="text-xs font-mono" style={{ color: 'var(--chart-1)' }}>July Window</span>
@@ -554,8 +549,8 @@ export default function App() {
             </section>
 
             {/* Conversational Chief of Staff Dialogue Frame */}
-            <section className="relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07]">
-              <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] p-6 md:p-8 space-y-6">
+            <section className="bklit-frame">
+              <div className="bklit-frame-panel space-y-6">
                 
                 <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
                   <div>
@@ -571,7 +566,7 @@ export default function App() {
                   {messages.map(msg => (
                     <div key={msg.id} className="flex items-start gap-4">
                       <div className="w-7 h-7 rounded-lg bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-xs font-mono font-medium shrink-0 text-white">
-                        {msg.sender === 'yomi' ? 'Y' : 'N'}
+                        {msg.sender === 'yomi' ? 'Y' : 'U'}
                       </div>
                       <div className="rounded-xl border border-white/[0.08] bg-[#0c0c0e] p-4 text-xs md:text-sm leading-relaxed max-w-3xl space-y-2">
                         <p className="text-zinc-200">{msg.text}</p>
@@ -582,6 +577,7 @@ export default function App() {
                   <div ref={chatBottomRef} />
                 </div>
 
+                {/* Integrated Chat Input */}
                 <div className="flex items-center gap-3 p-2 rounded-xl bg-black/40 border border-white/[0.08]">
                   <input 
                     type="text" 
@@ -594,7 +590,7 @@ export default function App() {
                   <button 
                     onClick={() => handleSendMessage()}
                     disabled={isProcessing}
-                    className="h-8 px-4 rounded-lg bg-white text-black hover:bg-zinc-200 text-xs font-medium transition-all flex items-center gap-1.5"
+                    className="bklit-btn bklit-btn-default flex items-center gap-1.5"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>Send</span>
@@ -615,13 +611,13 @@ export default function App() {
             <div className="border-b border-white/[0.06] pb-5">
               <h1 className="text-2xl font-bold tracking-tight text-white">Academics & Dossier</h1>
               <p className="text-xs md:text-sm text-zinc-400 mt-1">
-                Consolidated repository of verified transcripts, degree certificates, industry research credentials, and formal thesis proposal.
+                Consolidated repository of verified academic transcripts, degree certificates, industry research credentials, and formal thesis proposal.
               </p>
             </div>
 
             {/* Master's Thesis Proposal */}
-            <section className="relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07]">
-              <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] p-6 md:p-8 space-y-4">
+            <section className="bklit-frame">
+              <div className="bklit-frame-panel space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Master's Thesis Proposal</span>
@@ -629,10 +625,10 @@ export default function App() {
                       Decentralized Edge Intelligence & Fault-Tolerant Consensus for Distributed Systems
                     </h2>
                     <p className="text-xs text-zinc-400 mt-1">
-                      Candidate: Nirmiti R. Tamore · Target: Japanese National & Private Labs (SIT, Waseda, Science Tokyo)
+                      Academic Focus: Distributed Edge AI · Byzantine Fault Tolerance · Real-Time IoT Systems
                     </p>
                   </div>
-                  <button className="h-8 px-3 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.08] text-xs font-medium text-white flex items-center gap-2">
+                  <button className="bklit-btn bklit-btn-outline flex items-center gap-2">
                     <ExternalLink className="w-3.5 h-3.5" />
                     <span>Export Brief (PDF)</span>
                   </button>
@@ -640,7 +636,7 @@ export default function App() {
 
                 <div className="p-4 rounded-xl bg-black/40 border border-white/[0.06] text-xs leading-relaxed text-zinc-400 space-y-3">
                   <p>
-                    <strong className="text-white">Core Abstract:</strong> As IoT and distributed sensor fabrics proliferate across mission-critical urban and industrial infrastructure in Japan, centralized cloud processing induces intolerable latency bottlenecks and single-point failure hazards. This research explores lightweight peer-to-peer consensus paradigms coupled with quantized on-device neural inference.
+                    <strong className="text-white">Core Abstract:</strong> As IoT and distributed sensor fabrics proliferate across mission-critical urban and industrial infrastructure, centralized cloud processing induces intolerable latency bottlenecks and single-point failure hazards. This research explores lightweight peer-to-peer consensus paradigms coupled with quantized on-device neural inference.
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                     <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
@@ -662,8 +658,8 @@ export default function App() {
 
             {/* Credentials & Verification Grid */}
             <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07]">
-                <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] p-6 space-y-4">
+              <div className="bklit-frame">
+                <div className="bklit-frame-panel space-y-4">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <span className="text-[10px] font-mono text-zinc-500 uppercase">Undergraduate Degree</span>
@@ -675,21 +671,21 @@ export default function App() {
                     </span>
                   </div>
                   <p className="text-xs text-zinc-400 leading-relaxed">
-                    Sandip University (Graduated 2024). Awarded First Class with Distinction. Official transcripts and degree passing certificates validated.
+                    Awarded First Class with Distinction. Official transcripts and degree passing certificates cryptographically validated and archived.
                   </p>
                   <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-xs text-zinc-500 font-mono">
-                    <span>CGPA: 8.42 / 10.0</span>
-                    <span>Nashik, MH</span>
+                    <span>Distinction Division</span>
+                    <span>Graduated 2024</span>
                   </div>
                 </div>
               </div>
 
-              <div className="relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07]">
-                <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] p-6 space-y-4">
+              <div className="bklit-frame">
+                <div className="bklit-frame-panel space-y-4">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <span className="text-[10px] font-mono text-zinc-500 uppercase">Research Experience</span>
-                      <h3 className="text-sm font-semibold text-white">Virtually Testing Foundation</h3>
+                      <h3 className="text-sm font-semibold text-white">Systems Research Fellowship</h3>
                     </div>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-mono border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 flex items-center gap-1">
                       <ShieldCheck className="w-3 h-3" />
@@ -697,21 +693,21 @@ export default function App() {
                     </span>
                   </div>
                   <p className="text-xs text-zinc-400 leading-relaxed">
-                    Cybersecurity & Cloud Systems Research Intern (California 501(c)(3)). Formal letter of recommendation and internship certification indexed.
+                    Cybersecurity & Cloud Systems Research Fellow. Formal letters of recommendation and fellowship completion credentials indexed.
                   </p>
                   <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-xs text-zinc-500 font-mono">
                     <span>Specialization: NetSec</span>
-                    <span>USA (Remote)</span>
+                    <span>Systems Track</span>
                   </div>
                 </div>
               </div>
 
-              <div className="relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07]">
-                <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] p-6 space-y-4">
+              <div className="bklit-frame">
+                <div className="bklit-frame-panel space-y-4">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <span className="text-[10px] font-mono text-zinc-500 uppercase">Industry Practicum</span>
-                      <h3 className="text-sm font-semibold text-white">Global Source Technology</h3>
+                      <h3 className="text-sm font-semibold text-white">Enterprise Engineering Practicum</h3>
                     </div>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-mono border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 flex items-center gap-1">
                       <ShieldCheck className="w-3 h-3" />
@@ -719,23 +715,23 @@ export default function App() {
                     </span>
                   </div>
                   <p className="text-xs text-zinc-400 leading-relaxed">
-                    Software Engineering & Full-Stack Systems Intern. Practical deployment of telemetry dashboards and distributed microservices.
+                    Software Engineering & Full-Stack Systems Practicum. Practical production deployment of telemetry pipelines and distributed microservices.
                   </p>
                   <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-xs text-zinc-500 font-mono">
                     <span>Enterprise Systems</span>
-                    <span>Pune, MH</span>
+                    <span>Full-Stack Track</span>
                   </div>
                 </div>
               </div>
             </section>
 
             {/* ArXiv Literature Satellite */}
-            <section className="relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07]">
-              <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] p-6 md:p-8 space-y-5">
+            <section className="bklit-frame">
+              <div className="bklit-frame-panel space-y-5">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <h2 className="text-base font-semibold text-white">ArXiv Literature Satellite</h2>
-                    <p className="text-xs text-zinc-400">Live synthesis of Japanese computer science lab publications.</p>
+                    <p className="text-xs text-zinc-400">Live synthesis of relevant computer science research publications.</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <input 
@@ -743,7 +739,7 @@ export default function App() {
                       defaultValue="Edge AI fault tolerant consensus" 
                       className="px-3 py-1.5 rounded-lg text-xs bg-black/40 border border-white/[0.08] text-white w-64 focus:outline-none"
                     />
-                    <button className="h-8 px-3 rounded-lg bg-white text-black hover:bg-zinc-200 text-xs font-medium transition-all">
+                    <button className="bklit-btn bklit-btn-default text-xs">
                       Query
                     </button>
                   </div>
@@ -754,9 +750,9 @@ export default function App() {
                     <div className="space-y-1 max-w-2xl">
                       <span className="text-[10px] font-mono text-zinc-500">arXiv:2410.18942v1 [cs.DC]</span>
                       <h4 className="text-xs md:text-sm font-medium text-white">Byzantine Resilient Consensus in Asynchronous Mobile Edge Architectures</h4>
-                      <p className="text-xs text-zinc-400">T. Nakamura, K. Fukuda et al. · Shibaura Institute of Technology & NII</p>
+                      <p className="text-xs text-zinc-400">Edge Systems & Distributed Consensus Research Group</p>
                     </div>
-                    <button className="h-8 px-3 rounded-lg border border-white/[0.08] hover:bg-white/[0.06] text-xs font-mono text-zinc-400">
+                    <button className="bklit-btn bklit-btn-outline text-xs font-mono">
                       Generate BibTeX
                     </button>
                   </div>
@@ -765,9 +761,9 @@ export default function App() {
                     <div className="space-y-1 max-w-2xl">
                       <span className="text-[10px] font-mono text-zinc-500">arXiv:2409.04112v2 [cs.AI]</span>
                       <h4 className="text-xs md:text-sm font-medium text-white">Quantized Micro-Transformers for Autonomous Sensor Node Clustering</h4>
-                      <p className="text-xs text-zinc-400">Y. Fujimura, S. Sato · Waseda University Graduate School of IPS</p>
+                      <p className="text-xs text-zinc-400">Distributed Intelligence & Neural Acceleration Lab</p>
                     </div>
-                    <button className="h-8 px-3 rounded-lg border border-white/[0.08] hover:bg-white/[0.06] text-xs font-mono text-zinc-400">
+                    <button className="bklit-btn bklit-btn-outline text-xs font-mono">
                       Generate BibTeX
                     </button>
                   </div>
@@ -801,9 +797,9 @@ export default function App() {
 
                 <div 
                   onClick={() => setIsFlipped(prev => !prev)}
-                  className="cursor-pointer h-72 relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07] hover:border-white/[0.18] transition-all"
+                  className="cursor-pointer h-72 bklit-frame hover:border-white/[0.18] transition-all"
                 >
-                  <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] p-8 flex flex-col justify-between h-full">
+                  <div className="bklit-frame-panel flex flex-col justify-between h-full">
                     {!isFlipped ? (
                       <>
                         <div className="flex items-center justify-between">
@@ -867,7 +863,7 @@ export default function App() {
                       setIsFlipped(false);
                       setCardIdx(prev => (prev - 1 + dojoCards.length) % dojoCards.length);
                     }}
-                    className="h-8 px-4 rounded-lg border border-white/[0.08] hover:bg-white/[0.06] text-xs font-medium text-zinc-400 transition-all"
+                    className="bklit-btn bklit-btn-outline"
                   >
                     Previous Card
                   </button>
@@ -879,7 +875,7 @@ export default function App() {
                       setIsFlipped(false);
                       setCardIdx(prev => (prev + 1) % dojoCards.length);
                     }}
-                    className="h-8 px-4 rounded-lg bg-white text-black hover:bg-zinc-200 text-xs font-medium transition-all"
+                    className="bklit-btn bklit-btn-default"
                   >
                     Next Card
                   </button>
@@ -887,8 +883,8 @@ export default function App() {
               </div>
 
               {/* Right: 4-Choice Drill */}
-              <div className="md:col-span-5 relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07]">
-                <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] p-6 space-y-5">
+              <div className="md:col-span-5 bklit-frame">
+                <div className="bklit-frame-panel space-y-5">
                   <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
                     <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Laboratory Keigo Drill</span>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Active</span>
@@ -956,8 +952,8 @@ export default function App() {
 
             <div className="space-y-4">
               {/* Connection 1: CiteX */}
-              <div className="relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07]">
-                <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] p-6 flex flex-wrap items-center justify-between gap-4">
+              <div className="bklit-frame">
+                <div className="bklit-frame-panel flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center font-mono text-xs font-bold text-white">
                       CX
@@ -985,7 +981,7 @@ export default function App() {
                         {showTokens['citex'] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                       </button>
                     </div>
-                    <button className="h-8 px-3 rounded-lg border border-white/[0.08] hover:bg-white/[0.06] text-xs font-medium text-white flex items-center gap-1.5">
+                    <button className="bklit-btn bklit-btn-outline flex items-center gap-1.5">
                       <RefreshCw className="w-3 h-3" />
                       <span>Ping (12ms)</span>
                     </button>
@@ -994,8 +990,8 @@ export default function App() {
               </div>
 
               {/* Connection 2: Google Workspace */}
-              <div className="relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07]">
-                <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] p-6 flex flex-wrap items-center justify-between gap-4">
+              <div className="bklit-frame">
+                <div className="bklit-frame-panel flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center font-mono text-xs font-bold text-white">
                       GW
@@ -1007,7 +1003,7 @@ export default function App() {
                         <span className="text-[10px] font-mono text-emerald-400">Authorized</span>
                       </div>
                       <p className="text-xs text-zinc-400">
-                        Direct academic email drafting bridge & Google Drive cloud backup staging (<code className="font-mono text-zinc-300">backend/Google_Drive_Sync/</code>).
+                        Direct academic email drafting bridge & cloud backup staging.
                       </p>
                     </div>
                   </div>
@@ -1022,7 +1018,7 @@ export default function App() {
                         {showTokens['gw'] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                       </button>
                     </div>
-                    <button className="h-8 px-3 rounded-lg border border-white/[0.08] hover:bg-white/[0.06] text-xs font-medium text-white">
+                    <button className="bklit-btn bklit-btn-outline">
                       Sync Staging
                     </button>
                   </div>
@@ -1030,8 +1026,8 @@ export default function App() {
               </div>
 
               {/* Connection 3: GitHub */}
-              <div className="relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07]">
-                <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] p-6 flex flex-wrap items-center justify-between gap-4">
+              <div className="bklit-frame">
+                <div className="bklit-frame-panel flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center font-mono text-xs font-bold text-white">
                       GH
@@ -1058,7 +1054,7 @@ export default function App() {
                         {showTokens['gh'] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                       </button>
                     </div>
-                    <button className="h-8 px-3 rounded-lg border border-white/[0.08] hover:bg-white/[0.06] text-xs font-medium text-white">
+                    <button className="bklit-btn bklit-btn-outline">
                       Push Verify
                     </button>
                   </div>
@@ -1072,25 +1068,25 @@ export default function App() {
       </main>
 
       {/* ------------------------------------------------------------- */}
-      {/* 3. FLOATING MINIMIZABLE/MAXIMIZABLE STICKY WINDOW             */}
+      {/* 3. MINIMIZABLE / MAXIMIZABLE DOCKED CONTROLLER                */}
       {/* ------------------------------------------------------------- */}
       <div className="fixed bottom-5 right-5 z-50">
         {!isWindowOpen ? (
           <div 
             onClick={() => setIsWindowOpen(true)}
-            className="cursor-pointer group flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0e0e11]/90 hover:bg-[#16161a] border border-white/[0.12] hover:border-white/[0.24] shadow-xl backdrop-blur-md transition-all"
-            title="Open Pipeline & Actions"
+            className="cursor-pointer group flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-[#0e0e11]/95 hover:bg-[#16161a] border border-white/[0.14] hover:border-white/[0.28] shadow-2xl backdrop-blur-md transition-all"
+            title="Open Pipeline & Action Tracker"
           >
-            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: 'var(--chart-1)' }} />
-            <span className="text-[11px] font-medium tracking-tight text-white group-hover:text-zinc-200">Pipeline</span>
-            <span className="text-[10px] font-mono text-zinc-400">
+            <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--chart-1)' }} />
+            <span className="text-xs font-medium tracking-tight text-white group-hover:text-zinc-200">Pipelines & Actions</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-white/[0.06] text-zinc-300">
               3 · {actionTasks.filter(t => !t.completed).length}
             </span>
-            <ChevronUp className="w-3 h-3 text-zinc-400 group-hover:text-white transition-colors" />
+            <ChevronUp className="w-3.5 h-3.5 text-zinc-400 group-hover:text-white transition-colors" />
           </div>
         ) : (
-          <div className="w-80 md:w-[360px] max-h-[500px] relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.12] shadow-2xl backdrop-blur-2xl transition-all">
-            <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] overflow-hidden flex flex-col">
+          <div className="w-80 md:w-[380px] max-h-[500px] bklit-frame shadow-2xl backdrop-blur-2xl transition-all">
+            <div className="bklit-frame-panel p-0 overflow-hidden flex flex-col">
               
               {/* Header */}
               <div className="px-4 py-2.5 border-b border-white/[0.08] flex items-center justify-between bg-black/40">
@@ -1103,7 +1099,7 @@ export default function App() {
                   className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all"
                   title="Minimize window"
                 >
-                  <ChevronDown className="w-3 h-3" />
+                  <ChevronDown className="w-3.5 h-3.5" />
                 </button>
               </div>
 
@@ -1115,7 +1111,7 @@ export default function App() {
                     stickyTab === 'pipeline' ? 'bg-white/[0.08] text-white' : 'text-zinc-400 hover:text-white'
                   }`}
                 >
-                  University Pipeline
+                  Research Tracks
                 </button>
                 <button 
                   onClick={() => setStickyTab('actions')}
@@ -1127,77 +1123,47 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Body with Custom Sleek Scrollbar */}
+              {/* Body */}
               <div className="flex-1 overflow-y-auto card-scroll p-3.5 space-y-3 max-h-[380px]">
                 {stickyTab === 'pipeline' ? (
                   <div className="space-y-3">
-                    {/* SIT: In Dialogue */}
                     <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-white">Shibaura Inst. of Tech (SIT)</span>
+                        <span className="text-xs font-semibold text-white">Track A: Distributed Systems & IoT</span>
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border" style={{ color: 'var(--chart-1)', backgroundColor: 'rgba(251, 113, 133, 0.08)', borderColor: 'rgba(251, 113, 133, 0.2)' }}>
-                          Replied
+                          Active Dialogue
                         </span>
                       </div>
-                      <p className="text-xs text-zinc-400">Prof. Kenji Fukuda · Distributed Systems & IoT</p>
+                      <p className="text-xs text-zinc-400">Target: Distributed Systems, Low-Latency Consensus, P2P Edge Nodes</p>
                       <div className="text-[11px] font-mono text-zinc-500 pt-1 border-t border-white/[0.04]">
-                        Action: Send revised Edge AI proposal draft.
+                        Status: Proposal telemetry benchmark synchronization underway.
                       </div>
                     </div>
 
-                    {/* Waseda: Window Approaching */}
                     <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-white">Waseda University (IPS)</span>
+                        <span className="text-xs font-semibold text-white">Track B: Distributed Intelligence Lab</span>
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.04] text-zinc-300 border border-white/[0.08]">
                           Opens Dec 1
                         </span>
                       </div>
-                      <p className="text-xs text-zinc-400">Prof. Yoshiaki Fujimura · Distributed Intelligence</p>
+                      <p className="text-xs text-zinc-400">Target: Quantized Micro-Models & On-Device Clustering</p>
                       <div className="text-[11px] font-mono text-zinc-500 pt-1 border-t border-white/[0.04]">
-                        Deadline: Dec 15, 2026 application submission.
+                        Window: Dec 15, 2026 formal application submission.
                       </div>
                     </div>
 
-                    {/* Science Tokyo: Under Review */}
                     <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-white">Institute of Science Tokyo</span>
+                        <span className="text-xs font-semibold text-white">Track C: Pervasive Systems & Fault-Tolerance</span>
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.04] text-zinc-300 border border-white/[0.08]">
                           In Review
                         </span>
                       </div>
-                      <p className="text-xs text-zinc-400">Prof. Kenichi Okada / Prof. Xavier Défago</p>
+                      <p className="text-xs text-zinc-400">Target: Asynchronous Mobile Edge & Byzantine Fault Tolerance</p>
                       <div className="text-[11px] font-mono text-zinc-500 pt-1 border-t border-white/[0.04]">
                         Status: Pre-screening evaluation in progress.
                       </div>
-                    </div>
-
-                    {/* NAIST: Pending */}
-                    <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-white">NAIST</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.02] text-zinc-400 border border-white/[0.06]">
-                          Pending Contact
-                        </span>
-                      </div>
-                      <p className="text-xs text-zinc-400">Prof. Hajimu Inoue · Distributed Edge Security</p>
-                      <div className="text-[11px] font-mono text-zinc-500 pt-1 border-t border-white/[0.04]">
-                        Draft email ready in Gmail bridge.
-                      </div>
-                    </div>
-
-                    {/* Osaka: Struck out */}
-                    <div className="p-3.5 rounded-xl bg-white/[0.01] border border-white/[0.04] opacity-50 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-zinc-500 line-through">Osaka University (AAD)</span>
-                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-500 border border-zinc-800 line-through">
-                          Struck Out
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-zinc-600 line-through">
-                        Special Selection 2026 track concluded. Archiving complete.
-                      </p>
                     </div>
                   </div>
                 ) : (

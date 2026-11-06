@@ -1,68 +1,44 @@
 /* ==========================================================================
-   BKLIT UI DESIGN SYSTEM (bklit.com specification)
-   Ultra-Minimalist Dark Zinc, Hairline Borders, Micro-Gradients & Shimmers
+   AUTHENTIC BKLIT UI DESIGN SYSTEM (bklit.com specification)
+   Ultra-Minimalist Dark Zinc, Hairline Borders, Micro-Gradients & Nested Frames
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 :root {
-  /* Bklit Color Tokens */
-  --bg-canvas: #09090b;             /* Zinc-950 */
-  --bg-card: #121215;               /* Elevated Card Surface */
-  --bg-card-hover: #18181c;         /* Card Hover Surface */
-  --bg-muted: rgba(255, 255, 255, 0.04);
-  --bg-accent: rgba(255, 255, 255, 0.08);
-  
-  /* User Custom OKLCH Tokens */
-  --chart-1: oklch(0.756 0.211 0);          /* Luminous Coral / Rose */
+  --background: #09090b;
+  --foreground: #f5f5f5;
+  --card: #0e0e11;
+  --card-foreground: #f5f5f5;
+  --popover: #0e0e11;
+  --popover-foreground: #f5f5f5;
+  --primary: #f5f5f5;
+  --primary-foreground: #171717;
+  --secondary: rgba(255, 255, 255, 0.04);
+  --secondary-foreground: #f5f5f5;
+  --muted: rgba(255, 255, 255, 0.04);
+  --muted-foreground: #a3a3a3;
+  --accent: rgba(255, 255, 255, 0.06);
+  --accent-foreground: #f5f5f5;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.10);
+  --ring: #737373;
+
+  /* Custom OKLCH Chart Tokens */
+  --chart-1: oklch(0.756 0.211 0);          /* Luminous Coral / Rose (#fb7185) */
   --chart-2: oklch(0.785 0.138 349.938);    /* Soft Rose Magenta */
   --chart-3: oklch(0.871 0.006 286.286);    /* Lavender Zinc */
-  --chart-4: oklch(0.552 0.016 285.938);    /* Muted Slate */
+  --chart-4: oklch(0.552 0.016 285.938);    /* Slate */
   --chart-5: oklch(0.442 0.017 285.786);    /* Charcoal */
-  --chart-positive: oklch(0.268 0.004 163.223);
-  --chart-negative: oklch(0 0 22.216);
 
-  /* Bklit Sequential Heatmap Scale (from packages/studio bklit-tokens.css) */
+  /* Sequential Scale for Heatmaps */
   --chart-scale-mix: oklch(0.25 0 0);
   --chart-scale-01: #18181b;
   --chart-scale-02: color-mix(in oklab, var(--chart-1) 35%, var(--chart-scale-mix));
   --chart-scale-03: color-mix(in oklab, var(--chart-1) 55%, var(--chart-scale-mix));
   --chart-scale-04: color-mix(in oklab, var(--chart-1) 78%, var(--chart-scale-mix));
   --chart-scale-05: var(--chart-1);
-
-  /* Heatmap Colors */
-  --heat-0: var(--chart-scale-01);
-  --heat-1: var(--chart-scale-02);
-  --heat-2: var(--chart-scale-03);
-  --heat-3: var(--chart-scale-04);
-  --heat-4: var(--chart-scale-05);
-
-  /* Hairline Precision Borders */
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.22);
-  --border-active: rgba(255, 255, 255, 0.45);
-
-  /* Typography */
-  --text-primary: #fafafa;          /* Off-white Crisp */
-  --text-secondary: #a1a1aa;        /* Cool Zinc Gray */
-  --text-muted: #71717a;            /* Zinc-500 */
-  --text-dim: #52525b;              /* Zinc-600 */
-
-  /* Fonts */
-  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-
-  /* Elevation & Curves */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 18px;
-  --radius-full: 9999px;
-
-  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
-  --shadow-hover: 0 12px 32px -8px rgba(0, 0, 0, 0.7);
-  --glow-halo: 0 0 24px -4px rgba(255, 255, 255, 0.08);
 }
 
 * {
@@ -72,23 +48,195 @@
 }
 
 body {
-  background-color: var(--bg-canvas);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 1.5;
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  letter-spacing: -0.012em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
   overflow-x: hidden;
 }
 
-/* Custom thin scrollbars */
+.font-mono {
+  font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* -------------------------------------------------------------
+   Bklit Container & Architecture
+   ------------------------------------------------------------- */
+.bklit-container {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  position: relative;
+  width: 100%;
+}
+@media (min-width: 1024px) {
+  .bklit-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* Vertical edge rails */
+.bklit-rails::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -12px;
+  width: 1px;
+  background-color: var(--border);
+}
+.bklit-rails::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -12px;
+  width: 1px;
+  background-color: var(--border);
+}
+
+/* Rivets and dividers */
+.bklit-divider {
+  position: relative;
+  height: 1px;
+  width: 100%;
+  background-color: var(--border);
+  margin: 2rem 0;
+}
+.bklit-divider::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: -3.5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background-color: var(--card);
+}
+.bklit-divider::after {
+  content: "";
+  position: absolute;
+  right: -16px;
+  top: -3.5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background-color: var(--card);
+}
+
+/* -------------------------------------------------------------
+   Bklit Official Frame & FramePanel (ui/frame.tsx)
+   ------------------------------------------------------------- */
+.bklit-frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: 1rem;
+  background-color: var(--muted);
+  padding: 4px;
+  border: 1px solid var(--border);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bklit-frame-panel {
+  position: relative;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background-color: var(--card);
+  padding: 1.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.bklit-frame-panel::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: calc(0.75rem - 1px);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+}
+
+/* -------------------------------------------------------------
+   Bklit Button Variants
+   ------------------------------------------------------------- */
+.bklit-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  height: 2.125rem;
+  padding: 0 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+}
+
+.bklit-btn-default {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+.bklit-btn-default:hover {
+  opacity: 0.92;
+  transform: translateY(-0.5px);
+}
+
+.bklit-btn-outline {
+  background-color: rgba(255, 255, 255, 0.03);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+.bklit-btn-outline:hover {
+  background-color: var(--accent);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* -------------------------------------------------------------
+   Heatmap Squircle Cells & Transitions
+   ------------------------------------------------------------- */
+.heat-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+.heat-cell:hover {
+  transform: scale(1.3);
+  z-index: 10;
+  filter: brightness(1.25);
+}
+
+.heat-cell-pattern {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 0);
+  background-size: 4px 4px;
+}
+
+/* -------------------------------------------------------------
+   Custom Sleek Scrollbar
+   ------------------------------------------------------------- */
 .card-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 }
 .card-scroll::-webkit-scrollbar {
   width: 4px;
+  height: 4px;
 }
 .card-scroll::-webkit-scrollbar-track {
   background: transparent;
@@ -99,543 +247,4 @@ body {
 }
 .card-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.28);
-}
-
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-full);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.24);
-}
-
-/* Master Layout */
-.bklit-shell {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* -------------------------------------------------------------
-   Top Navigation Bar (Bklit h-14 Header)
-   ------------------------------------------------------------- */
-.bklit-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  height: 56px;
-  background: rgba(9, 9, 11, 0.82);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-}
-
-.bklit-header-inner {
-  max-width: 1320px;
-  width: 100%;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.bklit-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-}
-
-.bklit-logo-badge {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  background: #ffffff;
-  color: #000000;
-  font-weight: 700;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.25);
-}
-
-.bklit-logo-title {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: #ffffff;
-}
-
-.bklit-logo-ver {
-  font-size: 10.5px;
-  font-family: var(--font-mono);
-  color: var(--text-muted);
-  background: var(--bg-muted);
-  border: 1px solid var(--border-subtle);
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
-}
-
-/* Segmented Navigation Tabs */
-.bklit-nav-tabs {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-full);
-  padding: 3px;
-}
-
-.bklit-tab-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: var(--radius-full);
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 12.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.bklit-tab-btn:hover {
-  color: #ffffff;
-}
-
-.bklit-tab-btn.active {
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-
-/* Header Telemetry Pills */
-.bklit-header-telemetry {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.telemetry-mini-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  background: var(--bg-muted);
-  border: 1px solid var(--border-subtle);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.telemetry-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #22c55e;
-  box-shadow: 0 0 6px #22c55e;
-}
-
-/* -------------------------------------------------------------
-   Main Canvas & Containers
-   ------------------------------------------------------------- */
-.bklit-main {
-  flex: 1;
-  max-width: 1320px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 28px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* -------------------------------------------------------------
-   Bklit Cards & Surfaces
-   ------------------------------------------------------------- */
-.bklit-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  box-shadow: var(--shadow-card);
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.bklit-card:hover {
-  border-color: var(--border-hover);
-  background: var(--bg-card-hover);
-  box-shadow: var(--shadow-hover);
-  transform: translateY(-2px);
-}
-
-.bklit-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-
-.bklit-card-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.bklit-card-subtitle {
-  font-size: 11.5px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-
-/* -------------------------------------------------------------
-   KPI Metric Blocks (Big Numbers & Deltas)
-   ------------------------------------------------------------- */
-.bklit-kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-@media (max-width: 1024px) {
-  .bklit-kpi-grid { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 640px) {
-  .bklit-kpi-grid { grid-template-columns: 1fr; }
-}
-
-.bklit-kpi-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 18px 20px;
-  transition: all 0.2s ease;
-}
-
-.bklit-kpi-card:hover {
-  border-color: var(--border-hover);
-  transform: translateY(-1px);
-}
-
-.bklit-kpi-label {
-  font-size: 11.5px;
-  color: var(--text-muted);
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.bklit-kpi-val {
-  font-family: var(--font-mono);
-  font-size: 26px;
-  font-weight: 700;
-  color: #ffffff;
-  letter-spacing: -0.03em;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.bklit-badge {
-  font-size: 10px;
-  font-family: var(--font-mono);
-  font-weight: 600;
-  padding: 2px 7px;
-  border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-  border: 1px solid var(--border-subtle);
-}
-
-.bklit-badge.green {
-  background: rgba(34, 197, 94, 0.12);
-  color: #4ade80;
-  border-color: rgba(34, 197, 94, 0.25);
-}
-
-.bklit-badge.blue {
-  background: rgba(59, 130, 246, 0.12);
-  color: #60a5fa;
-  border-color: rgba(59, 130, 246, 0.25);
-}
-
-/* -------------------------------------------------------------
-   Hero Chat & Intelligence View
-   ------------------------------------------------------------- */
-.chat-container {
-  max-width: 880px;
-  width: 100%;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.chat-thread-box {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  padding: 24px;
-  min-height: 480px;
-  max-height: 600px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  box-shadow: var(--shadow-card);
-}
-
-.chat-msg {
-  display: flex;
-  flex-direction: column;
-  max-width: 82%;
-  animation: fadeIn 0.2s ease-out;
-}
-
-.chat-msg.user {
-  align-self: flex-end;
-  align-items: flex-end;
-}
-
-.chat-msg.yomi {
-  align-self: flex-start;
-  align-items: flex-start;
-}
-
-.chat-bubble {
-  padding: 12px 18px;
-  border-radius: var(--radius-lg);
-  font-size: 13.5px;
-  line-height: 1.55;
-}
-
-.chat-msg.user .chat-bubble {
-  background: #ffffff;
-  color: #000000;
-  font-weight: 500;
-  border-bottom-right-radius: 4px;
-}
-
-.chat-msg.yomi .chat-bubble {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-subtle);
-  color: #fafafa;
-  border-bottom-left-radius: 4px;
-}
-
-.chat-meta {
-  font-size: 10px;
-  font-family: var(--font-mono);
-  color: var(--text-dim);
-  margin-top: 4px;
-  padding: 0 4px;
-}
-
-/* Floating Input Capsule */
-.bklit-input-capsule {
-  background: rgba(18, 18, 21, 0.88);
-  backdrop-filter: blur(14px);
-  border: 1px solid var(--border-hover);
-  border-radius: var(--radius-full);
-  padding: 8px 14px 8px 18px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  transition: all 0.2s ease;
-}
-
-.bklit-input-capsule:focus-within {
-  border-color: rgba(255, 255, 255, 0.45);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.2);
-}
-
-.bklit-input-field {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: #ffffff;
-  font-size: 13.5px;
-  font-family: var(--font-sans);
-}
-
-.bklit-input-field::placeholder {
-  color: var(--text-dim);
-}
-
-.capsule-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.capsule-btn:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.capsule-submit-btn {
-  background: #ffffff;
-  color: #000000;
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.capsule-submit-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
-}
-
-.capsule-submit-btn:disabled {
-  opacity: 0.2;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* Quick Prompt Chips */
-.quick-chips-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.quick-chip {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-  font-size: 11px;
-  padding: 4px 12px;
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.quick-chip:hover {
-  border-color: var(--border-hover);
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-}
-
-/* -------------------------------------------------------------
-   Academic & Literature Cards
-   ------------------------------------------------------------- */
-.academic-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  transition: all 0.2s ease;
-}
-
-.academic-card:hover {
-  border-color: var(--border-hover);
-  background: var(--bg-card-hover);
-}
-
-.bibtex-box {
-  background: #09090b;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  padding: 12px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: #e4e4e7;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  position: relative;
-}
-
-/* -------------------------------------------------------------
-   Roadmap & Sub-Agent Cards
-   ------------------------------------------------------------- */
-.bklit-grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-@media (max-width: 1024px) {
-  .bklit-grid-3 { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 640px) {
-  .bklit-grid-3 { grid-template-columns: 1fr; }
-}
-
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  font-size: 11.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-}
-
-.action-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: var(--border-hover);
-  color: #ffffff;
-}
-
-.action-btn.primary {
-  background: #ffffff;
-  color: #000000;
-  border-color: #ffffff;
-  font-weight: 600;
-}
-
-.action-btn.primary:hover {
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
 }
