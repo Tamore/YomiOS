@@ -253,21 +253,47 @@ export default function App() {
             {/* Custom Yomi Brandmark & Typography */}
             <div className="flex items-center gap-3">
               <svg 
-                className="w-5 h-5" 
+                className="w-5 h-5 shrink-0" 
                 viewBox="0 0 32 32" 
                 fill="none" 
                 xmlns="http://www.w3.org/2000/svg"
-                aria-label="Yomi Logo"
+                aria-label="Yomi Brandmark"
               >
-                {/* Yomi Brandmark: Tri-Vector Intelligence Nexus */}
-                {/* Left Ray: Perception & Research (Opaque White) */}
-                <path d="M7 6L16 16" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-                {/* Right Ray: Cognition & Synthesis (Translucent White 45%) */}
-                <path d="M25 6L16 16" stroke="white" strokeOpacity="0.45" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-                {/* Base Anchor: Executive Execution (Custom Rose Accent) */}
-                <path d="M16 16V26" stroke="var(--chart-1)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-                {/* Central Nexus Core */}
-                <circle cx="16" cy="16" r="2" fill="white" />
+                <defs>
+                  <linearGradient id="yomi-blade-l" x1="6" y1="5" x2="16" y2="17" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#ffffff" />
+                    <stop offset="100%" stopColor="#d4d4d8" />
+                  </linearGradient>
+                  <linearGradient id="yomi-blade-r" x1="26" y1="5" x2="16" y2="17" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#ffffff" stopOpacity="0.75" />
+                    <stop offset="100%" stopColor="#71717a" stopOpacity="0.35" />
+                  </linearGradient>
+                  <linearGradient id="yomi-keel" x1="16" y1="15" x2="16" y2="28" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#fb7185" />
+                    <stop offset="100%" stopColor="#e11d48" />
+                  </linearGradient>
+                </defs>
+
+                {/* Left Aerodynamic Wing (Perception & 読み) */}
+                <path 
+                  d="M6 6C6 5.45 6.45 5 7 5H12C12.6 5 13.15 5.35 13.4 5.9L16 11.5L12.5 14.5L6.5 8C6.18 7.65 6 7.18 6 6.7V6Z" 
+                  fill="url(#yomi-blade-l)" 
+                />
+                
+                {/* Right Aerodynamic Wing (Synthesis & Cognition) */}
+                <path 
+                  d="M26 6C26 5.45 25.55 5 25 5H20C19.4 5 18.85 5.35 18.6 5.9L16 11.5L19.5 14.5L25.5 8C25.82 7.65 26 7.18 26 6.7V6Z" 
+                  fill="url(#yomi-blade-r)" 
+                />
+
+                {/* Center Tapered Keel (Action & Execution in Rose) */}
+                <path 
+                  d="M14 15.5H18L17.2 26.2C17.15 27 16.5 27.5 16 27.5C15.5 27.5 14.85 27 14.8 26.2L14 15.5Z" 
+                  fill="url(#yomi-keel)" 
+                />
+
+                {/* Suspended Diamond Core (Neural Aperture) */}
+                <polygon points="16,13 18.5,15.5 16,18 13.5,15.5" fill="#ffffff" />
               </svg>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm tracking-tight text-white">Yomi</span>
