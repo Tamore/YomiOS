@@ -32,6 +32,7 @@ from tools.code_sandbox import execute_python_code
 from tools.workspace_manager import list_workspace_files, save_research_note, analyze_proposal_stats
 from tools.academic_researcher import conduct_academic_research
 from tools.web_summarizer import summarize_and_export_pdf
+from tools.japanese_tutor import get_all_flashcards, get_random_card, generate_quiz_question
 from mcp_connector import mcp_connector
 
 app = FastAPI(title="Yomi 2.0 Backlit Executive Engine", version="2.0.0")
@@ -278,6 +279,21 @@ def get_memories_endpoint():
 def store_memory_endpoint(payload: MemoryStorePayload):
     memory.remember(payload.key, payload.value, payload.category or "fact")
     return {"success": True, "key": payload.key}
+
+# -------------------------------------------------------------
+# Tool Endpoints: Japanese Language Tutor & Academic Keigo
+# -------------------------------------------------------------
+@app.get("/api/japanese/cards")
+def get_japanese_cards(category: Optional[str] = None):
+    return get_all_flashcards(category)
+
+@app.get("/api/japanese/random")
+def get_random_japanese_card(category: Optional[str] = None):
+    return get_random_card(category)
+
+@app.get("/api/japanese/quiz")
+def get_japanese_quiz(category: Optional[str] = None):
+    return generate_quiz_question(category)
 
 # -------------------------------------------------------------
 # Tracker Endpoints (Domains, Projects, Tasks)

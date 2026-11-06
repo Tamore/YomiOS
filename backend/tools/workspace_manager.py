@@ -81,3 +81,4 @@ def analyze_proposal_stats(file_path: str) -> Dict[str, Any]:
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
+

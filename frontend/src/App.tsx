@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { 
   Terminal, Target, CheckCircle2, Circle, 
-  FileText, Download, Bot, Play, Trash2, Plus, 
-  Cpu, Battery, Mic, Send, BookOpen
+  FileText, Download, Bot, Play, Trash2, 
+  Cpu, Battery, Mic, Send, BookOpen, Volume2, 
+  Code, Copy, Check, RefreshCw, 
+  School, HelpCircle, HardDrive
 } from 'lucide-react';
 
 interface Domain {
@@ -49,11 +51,58 @@ interface Subagent {
 
 interface Telemetry {
   cpu_percent: number;
+  cpu_cores?: number;
   ram_percent: number;
   ram_used_gb: number;
   ram_total_gb: number;
+  ram_free_gb?: number;
+  disk_percent?: number;
+  disk_used_gb?: number;
+  disk_total_gb?: number;
   battery_percent: number;
   is_charging: boolean;
+}
+
+interface JapaneseCard {
+  id: string;
+  kanji: string;
+  hiragana: string;
+  romaji: string;
+  meaning: string;
+  category: string;
+  level: string;
+  usage_tip: string;
+}
+
+interface JapaneseQuiz {
+  question_id: string;
+  prompt_kanji: string;
+  prompt_hiragana: string;
+  prompt_romaji: string;
+  category: string;
+  correct_answer: string;
+  options: string[];
+  usage_tip: string;
+}
+
+interface UniversitySummary {
+  id: string;
+  name: string;
+  program: string;
+  advisors: Array<{
+    name: string;
+    lab: string;
+    email?: string;
+    topics: string[];
+    status?: string;
+  }>;
+  deadlines: Array<{
+    event: string;
+    date: string;
+    days_left: number;
+    urgent: boolean;
+  }>;
+  portal: string;
 }
 
 interface ChatMessage {
@@ -65,25 +114,28 @@ interface ChatMessage {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'chat' | 'academic' | 'roadmaps' | 'subagents'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'academic' | 'admissions' | 'japanese' | 'system'>('chat');
   const [domains, setDomains] = useState<Domain[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [subagents, setSubagents] = useState<Subagent[]>([]);
+  const [admissions, setAdmissions] = useState<UniversitySummary[]>([]);
   const [telemetry, setTelemetry] = useState<Telemetry>({
     cpu_percent: 18,
     ram_percent: 42,
     ram_used_gb: 6.8,
     ram_total_gb: 16.0,
+    disk_percent: 48,
     battery_percent: 100,
     is_charging: true
   });
 
+  // Chat State
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       sender: 'yomi',
-      text: "System online. Bklit Minimalist HUD initialized. What are we building or researching today, Nirmiti?",
+      text: "System online. Bklit Executive HUD initialized. Research Satellites, Admissions Horizon, Japanese Dojo & MCP Bridges are all primed.",
       timestamp: "Just now"
     }
   ]);
@@ -91,19 +143,60 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isListening, setIsListening] = useState(false);
 
-  // Sub-agent spawner state
-  const [newAgentPrompt, setNewAgentPrompt] = useState("");
-  const [isSpawningAgent, setIsSpawningAgent] = useState(false);
+  // Japanese Dojo State
+  const [japaneseCards, setJapaneseCards] = useState<JapaneseCard[]>([]);
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [isCardFlipped, setIsCardFlipped] = useState(false);
+  const [japaneseCategory, setJapaneseCategory] = useState<string>("all");
+  const [activeQuiz, setActiveQuiz] = useState<JapaneseQuiz | null>(null);
+  const [quizSelectedOption, setQuizSelectedOption] = useState<string | null>(null);
+  const [quizFeedback, setQuizFeedback] = useState<string | null>(null);
 
-  // Academic research query state
+  // Admissions & Email Drafter State
+  const [selectedProfForEmail, setSelectedProfForEmail] = useState("Hiroaki Fukuda");
+  const [selectedUniForEmail, setSelectedUniForEmail] = useState("Shibaura Institute of Technology");
+  const [emailPurpose, setEmailPurpose] = useState("inquiry");
+  const [draftedEmail, setDraftedEmail] = useState<{ subject: string; body: string } | null>(null);
+  const [copiedEmail, setCopiedEmail] = useState(false);
+
+  // Code Sandbox State
+  const [sandboxCode, setSandboxCode] = useState<string>(
+`# Distributed Consensus Byzantine Threshold Formula
+# n >= 3f + 1
+def calculate_byzantine_fault_tolerance(total_nodes):
+    max_faulty = (total_nodes - 1) // 3
+    quorom_size = 2 * max_faulty + 1
+    return {
+        "nodes": total_nodes,
+        "max_byzantine_faults": max_faulty,
+        "required_quorum": quorom_size,
+        "safety_margin": f"{round((max_faulty/total_nodes)*100, 1)}%"
+    }
+
+print(calculate_byzantine_fault_tolerance(10))`
+  );
+  const [sandboxResult, setSandboxResult] = useState<any>(null);
+  const [isExecutingCode, setIsExecutingCode] = useState(false);
+
+  // CiteX MCP State
+  const [citexOnline, setCitexOnline] = useState<boolean>(false);
+  const [citexQuery, setCitexQuery] = useState("");
+  const [isDispatchingCitex, setIsDispatchingCitex] = useState(false);
+
+  // Academic Search State
   const [researchQuery, setResearchQuery] = useState("");
   const [isSearchingPaper, setIsSearchingPaper] = useState(false);
 
-  const [activeDomainFilter, setActiveDomainFilter] = useState<string | null>(null);
+  // Subagents State
+  const [newAgentPrompt, setNewAgentPrompt] = useState("");
+  const [isSpawningAgent, setIsSpawningAgent] = useState(false);
+
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchInitialState();
+    fetchJapaneseCards();
+    checkCitexStatus();
 
     const ws = new WebSocket("ws://127.0.0.1:8765/ws");
     ws.onmessage = (event) => {
@@ -149,6 +242,97 @@ export default function App() {
     if (payload.tasks) setTasks(payload.tasks);
     if (payload.subagents) setSubagents(payload.subagents);
     if (payload.telemetry) setTelemetry(payload.telemetry);
+    if (payload.admissions) setAdmissions(payload.admissions);
+  };
+
+  const fetchJapaneseCards = async (cat?: string) => {
+    try {
+      const url = cat && cat !== "all" 
+        ? `http://127.0.0.1:8765/api/japanese/cards?category=${cat}` 
+        : "http://127.0.0.1:8765/api/japanese/cards";
+      const res = await fetch(url);
+      if (res.ok) {
+        const cards = await res.json();
+        setJapaneseCards(cards);
+        setCurrentCardIndex(0);
+        setIsCardFlipped(false);
+      }
+    } catch (e) {
+      console.error("Failed to load cards", e);
+    }
+  };
+
+  const checkCitexStatus = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8765/api/mcp/citex/status");
+      if (res.ok) {
+        const data = await res.json();
+        setCitexOnline(data.online === true);
+      }
+    } catch (e) {
+      setCitexOnline(false);
+    }
+  };
+
+  const speakJapanese = (text: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ja-JP';
+      utterance.rate = 0.85; // slightly slower for optimal clarity
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const startJapaneseQuiz = async () => {
+    try {
+      const url = japaneseCategory && japaneseCategory !== "all"
+        ? `http://127.0.0.1:8765/api/japanese/quiz?category=${japaneseCategory}`
+        : "http://127.0.0.1:8765/api/japanese/quiz";
+      const res = await fetch(url);
+      if (res.ok) {
+        const q = await res.json();
+        setActiveQuiz(q);
+        setQuizSelectedOption(null);
+        setQuizFeedback(null);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const answerQuiz = (option: string) => {
+    if (!activeQuiz) return;
+    setQuizSelectedOption(option);
+    if (option === activeQuiz.correct_answer) {
+      setQuizFeedback("正解! Excellent! That is the exact correct meaning.");
+    } else {
+      setQuizFeedback(`不合格. The correct meaning is: "${activeQuiz.correct_answer}".`);
+    }
+  };
+
+  const toggleListening = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.onstart = () => setIsListening(true);
+      recognition.onend = () => setIsListening(false);
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+        handleSendMessage(transcript);
+      };
+      recognition.start();
+    } catch (e) {
+      setIsListening(false);
+    }
   };
 
   const handleSendMessage = async (textToSend?: string) => {
@@ -160,7 +344,7 @@ export default function App() {
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       sender: 'user',
-      text,
+      text: text,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     setMessages(prev => [...prev, userMsg]);
@@ -172,16 +356,17 @@ export default function App() {
         body: JSON.stringify({ message: text })
       });
       if (res.ok) {
-        const result = await res.json();
-        const yomiMsg: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          sender: 'yomi',
-          text: result.reply,
-          data: result.data,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        setMessages(prev => [...prev, yomiMsg]);
-        fetchInitialState();
+        const data = await res.json();
+        setMessages(prev => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            sender: 'yomi',
+            text: data.reply,
+            data: data.data,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ]);
       }
     } catch (e) {
       setMessages(prev => [
@@ -189,540 +374,846 @@ export default function App() {
         {
           id: (Date.now() + 1).toString(),
           sender: 'yomi',
-          text: "Command dispatched. Check your active matrix.",
-          timestamp: "Now"
+          text: "I am having trouble reaching the local core brain. Let's make sure the backend server is active.",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
     } finally {
       setIsProcessing(false);
-      chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
-  const handleToggleTask = async (taskId: string) => {
+  const toggleTask = async (taskId: string) => {
     try {
       await fetch(`http://127.0.0.1:8765/api/tasks/${taskId}/toggle`, { method: "POST" });
-      fetchInitialState();
     } catch (e) {
-      console.error("Toggle task error:", e);
+      console.error(e);
     }
   };
 
-  const handleRunSubagent = async (id: string) => {
+  const executeSandbox = async () => {
+    if (!sandboxCode.trim() || isExecutingCode) return;
+    setIsExecutingCode(true);
     try {
-      await fetch(`http://127.0.0.1:8765/api/subagents/${id}/run`, { method: "POST" });
-      fetchInitialState();
-    } catch (e) {
-      console.error("Run subagent error:", e);
-    }
-  };
-
-  const handleDeleteSubagent = async (id: string) => {
-    try {
-      await fetch(`http://127.0.0.1:8765/api/subagents/${id}`, { method: "DELETE" });
-      fetchInitialState();
-    } catch (e) {
-      console.error("Delete subagent error:", e);
-    }
-  };
-
-  const handleSpawnSubagent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newAgentPrompt.trim() || isSpawningAgent) return;
-    setIsSpawningAgent(true);
-    try {
-      await fetch("http://127.0.0.1:8765/api/subagents", {
+      const res = await fetch("http://127.0.0.1:8765/api/sandbox/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: newAgentPrompt })
+        body: JSON.stringify({ code: sandboxCode })
       });
-      setNewAgentPrompt("");
-      fetchInitialState();
+      if (res.ok) {
+        const data = await res.json();
+        setSandboxResult(data);
+      }
     } catch (e) {
-      console.error("Spawn subagent error:", e);
+      setSandboxResult({ success: false, stderr: String(e), stdout: "" });
     } finally {
-      setIsSpawningAgent(false);
+      setIsExecutingCode(false);
     }
   };
 
-  const handleResearchSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleDraftEmail = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8765/api/admissions/draft-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          professor_name: selectedProfForEmail,
+          university_name: selectedUniForEmail,
+          research_topic: "Self-Adaptive Distributed Systems & Fault-Tolerant Multi-Agent Architectures",
+          purpose: emailPurpose
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDraftedEmail(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const triggerAcademicSearch = async () => {
     if (!researchQuery.trim() || isSearchingPaper) return;
     setIsSearchingPaper(true);
-    await handleSendMessage(`research ${researchQuery}`);
-    setResearchQuery("");
-    setIsSearchingPaper(false);
-    setActiveTab('chat');
-  };
-
-  const handleVoiceToggle = () => {
-    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      alert("Speech recognition not supported in this browser. Try Google Chrome.");
-      return;
-    }
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-
-    if (!isListening) {
-      recognition.start();
-      setIsListening(true);
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setInput(transcript);
-        handleSendMessage(transcript);
-        setIsListening(false);
-      };
-      recognition.onerror = () => setIsListening(false);
-      recognition.onend = () => setIsListening(false);
-    } else {
-      recognition.stop();
-      setIsListening(false);
+    try {
+      const res = await fetch("http://127.0.0.1:8765/api/academic/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: researchQuery })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(prev => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            sender: 'yomi',
+            text: `Retrieved primary paper: **${data.paper.title}** (${data.paper.year}). Synthesized research brief to \`${data.pdf_filename}\`.`,
+            data: data,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ]);
+        setActiveTab('chat');
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSearchingPaper(false);
+      setResearchQuery("");
     }
   };
 
-  const quickPrompts = [
-    { label: "🔬 Research Kenji Tei", prompt: "research self-adaptive systems by Kenji Tei" },
-    { label: "🛡️ Fault Tolerance Brief", prompt: "research distributed fault tolerance" },
-    { label: "⛩️ Waseda Roadmap", prompt: "Start a roadmap for Waseda IPS Application" },
-    { label: "⚡ System Telemetry", prompt: "System telemetry" }
-  ];
+  const dispatchCitexResearch = async () => {
+    if (!citexQuery.trim() || isDispatchingCitex) return;
+    setIsDispatchingCitex(true);
+    try {
+      const res = await fetch("http://127.0.0.1:8765/api/mcp/citex/research", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: citexQuery, max_papers: 4 })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(prev => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            sender: 'yomi',
+            text: `CiteX Autonomous Engine synthesized literature review for **${citexQuery}** across multi-source preprints!`,
+            data: data,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ]);
+        setActiveTab('chat');
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsDispatchingCitex(false);
+      setCitexQuery("");
+    }
+  };
 
-  const filteredTasks = activeDomainFilter 
-    ? tasks.filter(t => t.domain_id === activeDomainFilter) 
-    : tasks;
+  const activeCard = japaneseCards[currentCardIndex] || null;
 
   return (
-    <div className="bklit-shell">
+    <div className="flex flex-col h-screen w-screen bg-[#09090b] text-[#f4f4f5] font-sans antialiased selection:bg-white/20 selection:text-white">
       
-      {/* 1. BKLIT ULTRA-SLIM TOP NAVIGATION (h-14) */}
-      <header className="bklit-header">
-        <div className="bklit-header-inner">
-          
-          <div className="bklit-brand" onClick={() => setActiveTab('chat')}>
-            <div className="bklit-logo-badge">⚡</div>
-            <span className="bklit-logo-title">YOMI OS</span>
-            <span className="bklit-logo-ver">v2.0-bklit</span>
+      {/* 1. Frosted Navigation Bar */}
+      <header className="h-14 border-b border-white/[0.08] bg-[#09090b]/80 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-20">
+        <div className="flex items-center gap-3">
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="font-mono text-sm tracking-widest text-zinc-300 font-semibold uppercase">Yomi OS 2.0</span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-zinc-400 font-mono">Bklit Engine</span>
+          {citexOnline && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-mono flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" /> CiteX Bridge Active
+            </span>
+          )}
+        </div>
+
+        {/* 5 Segmented Navigation Hubs */}
+        <nav className="flex items-center gap-1 bg-[#121215] p-1 rounded-lg border border-white/[0.06]">
+          {[
+            { id: 'chat', label: 'Intelligence HUD', icon: Terminal },
+            { id: 'admissions', label: 'Admissions & Labs', icon: School },
+            { id: 'japanese', label: 'Nihongo Dojo', icon: Volume2 },
+            { id: 'academic', label: 'Academic & CiteX', icon: BookOpen },
+            { id: 'system', label: 'System & Sandbox', icon: Code },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+                  isActive 
+                    ? 'bg-zinc-800 text-white shadow-sm' 
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.03]'
+                }`}
+              >
+                <Icon size={14} className={isActive ? 'text-zinc-100' : 'text-zinc-400'} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Telemetry Micro-Pill */}
+        <div className="flex items-center gap-4 text-xs font-mono text-zinc-400">
+          <div className="flex items-center gap-1.5">
+            <Cpu size={13} className="text-zinc-400" />
+            <span>{telemetry.cpu_percent}%</span>
           </div>
-
-          {/* Segmented Navigation Tabs */}
-          <nav className="bklit-nav-tabs">
-            <button 
-              onClick={() => setActiveTab('chat')} 
-              className={`bklit-tab-btn ${activeTab === 'chat' ? 'active' : ''}`}
-            >
-              <Terminal size={14} /> Intelligence HUD
-            </button>
-            <button 
-              onClick={() => setActiveTab('academic')} 
-              className={`bklit-tab-btn ${activeTab === 'academic' ? 'active' : ''}`}
-            >
-              <BookOpen size={14} /> Academic Radar
-            </button>
-            <button 
-              onClick={() => setActiveTab('roadmaps')} 
-              className={`bklit-tab-btn ${activeTab === 'roadmaps' ? 'active' : ''}`}
-            >
-              <Target size={14} /> Roadmaps & Matrix
-            </button>
-            <button 
-              onClick={() => setActiveTab('subagents')} 
-              className={`bklit-tab-btn ${activeTab === 'subagents' ? 'active' : ''}`}
-            >
-              <Bot size={14} /> Sub-Agents
-            </button>
-          </nav>
-
-          {/* Header Telemetry Pills */}
-          <div className="bklit-header-telemetry">
-            <div className="telemetry-mini-pill">
-              <div className="telemetry-dot" />
-              <span>CPU {telemetry.cpu_percent}%</span>
-            </div>
-            <div className="telemetry-mini-pill">
-              <span>RAM {telemetry.ram_percent}%</span>
-            </div>
+          <div className="flex items-center gap-1.5">
+            <HardDrive size={13} className="text-zinc-400" />
+            <span>{telemetry.ram_used_gb} GB</span>
           </div>
-
+          <div className="flex items-center gap-1.5">
+            <Battery size={13} className="text-zinc-400" />
+            <span>{telemetry.battery_percent}%</span>
+          </div>
         </div>
       </header>
 
-      {/* 2. MAIN BKLIT WORKSPACE */}
-      <main className="bklit-main">
+      {/* 2. Main Work Canvas */}
+      <main className="flex-1 overflow-hidden relative">
 
-        {/* =========================================================
-            TAB 1: INTELLIGENCE HUD (CHAT & HERO COCKPIT)
-            ========================================================= */}
+        {/* TAB 1: INTELLIGENCE HUD */}
         {activeTab === 'chat' && (
-          <div className="chat-container">
-            
-            {/* Top KPI Telemetry Banner */}
-            <div className="bklit-kpi-grid">
-              <div className="bklit-kpi-card">
-                <div className="bklit-kpi-label">
-                  <span>CPU UTILIZATION</span>
-                  <Cpu size={14} color="#a1a1aa" />
-                </div>
-                <div className="bklit-kpi-val">
-                  {telemetry.cpu_percent}%
-                  <span className="bklit-badge green">Nominal</span>
-                </div>
-              </div>
+          <div className="h-full flex flex-col max-w-4xl mx-auto px-6 py-6 justify-between">
+            {/* Scrollable Chat Stream */}
+            <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+              {messages.map((m) => {
+                const isUser = m.sender === 'user';
+                return (
+                  <div key={m.id} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+                    <div className="flex items-center gap-2 mb-1 px-1">
+                      <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
+                        {isUser ? 'Nirmiti' : 'Yomi Chief of Staff'}
+                      </span>
+                      <span className="text-[10px] text-zinc-400">{m.timestamp}</span>
+                    </div>
 
-              <div className="bklit-kpi-card">
-                <div className="bklit-kpi-label">
-                  <span>MEMORY USAGE</span>
-                  <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)' }}>{telemetry.ram_used_gb} / {telemetry.ram_total_gb} GB</span>
-                </div>
-                <div className="bklit-kpi-val">
-                  {telemetry.ram_percent}%
-                  <span className="bklit-badge blue">Active</span>
-                </div>
-              </div>
+                    <div className={`p-4 rounded-xl text-sm leading-relaxed max-w-[85%] border transition-all ${
+                      isUser 
+                        ? 'bg-zinc-900 border-white/[0.08] text-zinc-100 shadow-sm' 
+                        : 'bg-[#121215] border-white/[0.06] text-zinc-200'
+                    }`}>
+                      <div className="whitespace-pre-wrap">{m.text}</div>
 
-              <div className="bklit-kpi-card">
-                <div className="bklit-kpi-label">
-                  <span>BATTERY STATUS</span>
-                  <Battery size={14} color="#a1a1aa" />
-                </div>
-                <div className="bklit-kpi-val">
-                  {telemetry.battery_percent}%
-                  <span className="bklit-badge">Balanced</span>
-                </div>
-              </div>
-
-              <div className="bklit-kpi-card">
-                <div className="bklit-kpi-label">
-                  <span>AUTONOMOUS WORKERS</span>
-                  <Bot size={14} color="#a1a1aa" />
-                </div>
-                <div className="bklit-kpi-val">
-                  {subagents.length} Nodes
-                  <span className="bklit-badge green">Active</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Chat Thread */}
-            <div className="chat-thread-box">
-              {messages.map((m) => (
-                <div key={m.id} className={`chat-msg ${m.sender}`}>
-                  <div className="chat-bubble">
-                    <div>{m.text}</div>
-
-                    {/* PDF Brief Card if generated */}
-                    {m.data && (m.data.pdf_filename || m.data.filename) && (
-                      <div style={{ marginTop: '12px', padding: '12px', background: '#09090b', border: '1px solid var(--border-subtle)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <FileText size={18} color="#ffffff" />
-                          <div>
-                            <div style={{ fontSize: '12px', fontWeight: 600, color: '#ffffff' }}>
-                              {m.data.pdf_filename || m.data.filename}
-                            </div>
-                            <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                              Academic Synthesis & BibTeX PDF
+                      {/* Download PDF Artifact Card */}
+                      {m.data && m.data.pdf_filename && (
+                        <div className="mt-3.5 p-3 rounded-lg bg-zinc-900 border border-white/[0.08] flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5 overflow-hidden">
+                            <FileText size={18} className="text-emerald-400 shrink-0" />
+                            <div className="truncate">
+                              <p className="text-xs font-mono text-zinc-200 truncate">{m.data.pdf_filename}</p>
+                              <p className="text-[10px] text-zinc-400">Compiled Executive Research Brief</p>
                             </div>
                           </div>
+                          <a
+                            href={`http://127.0.0.1:8765/api/exports/${m.data.pdf_filename}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.08] hover:bg-white/[0.14] text-xs font-medium rounded-md text-white transition-colors"
+                          >
+                            <Download size={13} /> Download PDF
+                          </a>
                         </div>
-                        <a 
-                          href={`http://127.0.0.1:8765/api/exports/${m.data.pdf_filename || m.data.filename}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="action-btn primary"
-                        >
-                          <Download size={12} /> Open PDF
-                        </a>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                  <span className="chat-meta">{m.timestamp}</span>
-                </div>
-              ))}
+                );
+              })}
               <div ref={chatBottomRef} />
             </div>
 
-            {/* Quick Action Chips */}
-            <div className="quick-chips-row">
-              {quickPrompts.map((q, idx) => (
-                <button key={idx} onClick={() => handleSendMessage(q.prompt)} className="quick-chip">
-                  {q.label}
-                </button>
-              ))}
-            </div>
+            {/* Quick Action Chips & Floating Input Capsule */}
+            <div className="mt-4 shrink-0 space-y-3">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                {[
+                  "Check admissions deadlines",
+                  "Japanese quiz",
+                  "Match lab Fukuda",
+                  "Draft email to Prof Fukuda",
+                  "Proposal stats",
+                  "CiteX status"
+                ].map((chip) => (
+                  <button
+                    key={chip}
+                    onClick={() => handleSendMessage(chip)}
+                    className="text-[11px] font-mono px-3 py-1 rounded-full bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] text-zinc-400 hover:text-zinc-200 transition-colors shrink-0"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
 
-            {/* Floating Bklit Input Capsule */}
-            <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="bklit-input-capsule">
-              <button 
-                type="button" 
-                onClick={handleVoiceToggle} 
-                className="capsule-btn"
-                style={{ color: isListening ? '#ef4444' : undefined }}
-                title="Voice Command"
-              >
-                <Mic size={18} />
-              </button>
-
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={isListening ? "Listening to your voice..." : "Ask Yomi, research a topic, or spawn an agent..."}
-                className="bklit-input-field"
-                disabled={isProcessing}
-              />
-
-              <button 
-                type="submit" 
-                disabled={!input.trim() || isProcessing}
-                className="capsule-submit-btn"
-              >
-                <Send size={14} />
-              </button>
-            </form>
-
-          </div>
-        )}
-
-        {/* =========================================================
-            TAB 2: ACADEMIC RADAR (LITERATURE & CITATION ENGINE)
-            ========================================================= */}
-        {activeTab === 'academic' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            
-            {/* Search Bar */}
-            <div className="bklit-card" style={{ padding: '18px 24px' }}>
-              <form onSubmit={handleResearchSearch} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              {/* Floating Input Capsule */}
+              <div className="relative flex items-center bg-[#121215] border border-white/[0.08] rounded-xl px-3 py-2 shadow-lg focus-within:border-white/20 transition-all">
                 <input
                   type="text"
-                  value={researchQuery}
-                  onChange={(e) => setResearchQuery(e.target.value)}
-                  placeholder="Enter research topic or professor (e.g. 'self-adaptive systems Kenji Tei' or 'distributed fault tolerance')..."
-                  className="bklit-input-field"
-                  style={{ background: 'var(--bg-muted)', padding: '10px 16px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Ask Yomi, test Japanese, execute Python, or dispatch research..."
+                  className="w-full bg-transparent text-sm text-zinc-100 placeholder-zinc-400 focus:outline-none px-2"
                 />
-                <button type="submit" disabled={isSearchingPaper || !researchQuery.trim()} className="action-btn primary" style={{ padding: '10px 20px', whiteSpace: 'nowrap' }}>
-                  {isSearchingPaper ? "Synthesizing..." : "Synthesize Paper Brief"}
-                </button>
-              </form>
-            </div>
-
-            {/* Generated Briefs & Recent Research Cards */}
-            <div className="bklit-grid-3">
-              <div className="academic-card">
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                    <span className="bklit-badge blue">ArXiv 2014</span>
-                    <a href="http://127.0.0.1:8765/api/exports/Orthogonal_Fault_Tolerance_for_Dynamically_Adaptiv_Research_Brief.pdf" target="_blank" rel="noreferrer" className="action-btn">
-                      <Download size={11} /> PDF
-                    </a>
-                  </div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff', marginBottom: '6px' }}>
-                    Orthogonal Fault Tolerance for Dynamically Adaptive Systems
-                  </h4>
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                    Sobia K Khan et al. · Dependable Distributed Systems
-                  </p>
-                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                    Proposes orthogonal separation of fault-tolerance mechanisms from dynamic adaptation loops to preserve consistency across distributed nodes.
-                  </p>
-                </div>
-                <div className="bibtex-box">
-                  <code>{`@article{khan2014orthogonal,\n  title = {Orthogonal Fault Tolerance...},\n  author = {Sobia K Khan et al.},\n  year = {2014}\n}`}</code>
-                </div>
-              </div>
-
-              <div className="academic-card">
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                    <span className="bklit-badge blue">ArXiv 2024</span>
-                    <a href="http://127.0.0.1:8765/api/exports/Requirements-Driven_Dynamic_Adaptation_to_Mitigate_Research_Brief.pdf" target="_blank" rel="noreferrer" className="action-btn">
-                      <Download size={11} /> PDF
-                    </a>
-                  </div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff', marginBottom: '6px' }}>
-                    Requirements-Driven Dynamic Adaptation
-                  </h4>
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                    Kenji Tei et al. · Self-Adaptive Systems
-                  </p>
-                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                    Mitigating runtime uncertainties in autonomous multi-agent environments using goal-oriented models and bounded state repair.
-                  </p>
-                </div>
-                <div className="bibtex-box">
-                  <code>{`@article{tei2024dynamic,\n  title = {Requirements-Driven Dynamic...},\n  author = {Kenji Tei et al.},\n  year = {2024}\n}`}</code>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={toggleListening}
+                    className={`p-2 rounded-lg transition-all ${
+                      isListening ? 'bg-rose-500/30 text-rose-300 animate-pulse' : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white'
+                    }`}
+                    title="Voice dictation"
+                  >
+                    <Mic size={15} />
+                  </button>
+                  <button
+                    onClick={() => handleSendMessage()}
+                    disabled={!input.trim() || isProcessing}
+                    className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 disabled:pointer-events-none transition-all"
+                  >
+                    <Send size={15} />
+                  </button>
                 </div>
               </div>
             </div>
-
           </div>
         )}
 
-        {/* =========================================================
-            TAB 3: ROADMAPS & EXECUTION MATRIX
-            ========================================================= */}
-        {activeTab === 'roadmaps' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            
-            {/* Domain Selector Pills */}
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button 
-                onClick={() => setActiveDomainFilter(null)}
-                className={`quick-chip ${!activeDomainFilter ? 'active' : ''}`}
-                style={{ background: !activeDomainFilter ? '#ffffff' : undefined, color: !activeDomainFilter ? '#000000' : undefined }}
-              >
-                All Domains
-              </button>
-              {domains.map(d => (
-                <button
-                  key={d.id}
-                  onClick={() => setActiveDomainFilter(activeDomainFilter === d.id ? null : d.id)}
-                  className="quick-chip"
-                  style={{ background: activeDomainFilter === d.id ? '#ffffff' : undefined, color: activeDomainFilter === d.id ? '#000000' : undefined }}
-                >
-                  {d.name}
-                </button>
-              ))}
-            </div>
-
-            {/* Strategic Roadmaps */}
-            <div className="bklit-grid-3">
-              {projects.map(p => (
-                <div key={p.id} className="bklit-card">
-                  <div className="bklit-card-header">
-                    <span className="bklit-badge">{p.status}</span>
-                    <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
-                      {p.target_date || "2027 Entry"}
-                    </span>
-                  </div>
-                  <h4 style={{ fontSize: '15px', fontWeight: 600, color: '#ffffff', marginBottom: '8px' }}>
-                    {p.title}
-                  </h4>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Milestone Progress</span>
-                    <span style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#ffffff' }}>
-                      {p.progress}%
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Actionable Task Matrix */}
-            <div className="bklit-card">
-              <div className="bklit-card-header">
-                <div className="bklit-card-title">
-                  <CheckCircle2 size={16} color="#ffffff" />
-                  Actionable Execution Matrix
-                </div>
-                <span className="bklit-badge">
-                  {filteredTasks.filter(t => t.is_completed === 1).length} / {filteredTasks.length} Completed
+        {/* TAB 2: ADMISSIONS & LABS */}
+        {activeTab === 'admissions' && (
+          <div className="h-full overflow-y-auto max-w-5xl mx-auto px-6 py-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold tracking-tight text-zinc-100">AY2027 Japan Admissions Radar</h2>
+                <p className="text-xs text-zinc-400 mt-1">Live tracking for verified prospective universities, deadlines, and faculty alignment.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-mono px-2.5 py-1 rounded-md bg-white/[0.04] text-zinc-400 border border-white/[0.06]">
+                  {domains.length} Domains Active
+                </span>
+                <span className="text-[11px] font-mono px-2.5 py-1 rounded-md bg-white/[0.04] text-zinc-400 border border-white/[0.06]">
+                  {projects.length} Roadmaps Tracked
                 </span>
               </div>
+            </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {filteredTasks.map(t => (
-                  <div 
-                    key={t.id}
-                    onClick={() => handleToggleTask(t.id)}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '12px', 
-                      padding: '12px 16px', 
-                      background: 'var(--bg-muted)', 
-                      borderRadius: 'var(--radius-sm)',
-                      cursor: 'pointer',
-                      border: '1px solid var(--border-subtle)',
-                      opacity: t.is_completed === 1 ? 0.5 : 1
-                    }}
-                  >
-                    {t.is_completed === 1 ? <CheckCircle2 size={16} color="#4ade80" /> : <Circle size={16} color="#a1a1aa" />}
-                    <div style={{ flex: 1 }}>
-                      <span style={{ fontSize: '13px', color: t.is_completed === 1 ? 'var(--text-muted)' : '#ffffff', textDecoration: t.is_completed === 1 ? 'line-through' : 'none' }}>
-                        {t.title}
+            {/* University Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {admissions.map((uni) => (
+                <div key={uni.id} className="p-4 rounded-xl bg-[#121215] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-zinc-100">{uni.name}</h3>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.05] border border-white/[0.08] text-zinc-400">
+                        {uni.portal}
                       </span>
                     </div>
-                    <span className={`bklit-badge ${t.priority === 'P1' ? 'blue' : ''}`}>{t.priority}</span>
-                    {t.due_date && <span style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{t.due_date}</span>}
+                    <p className="text-xs text-zinc-400 mt-1">{uni.program}</p>
+
+                    {/* Advisors list */}
+                    <div className="mt-3 space-y-2">
+                      {uni.advisors.map((adv) => (
+                        <div key={adv.name} className="p-2.5 rounded-lg bg-zinc-900 border border-white/[0.04]">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-emerald-400">{adv.name}</span>
+                            <button
+                              onClick={() => {
+                                setSelectedProfForEmail(adv.name);
+                                setSelectedUniForEmail(uni.name);
+                                handleDraftEmail();
+                              }}
+                              className="text-[10px] text-zinc-400 hover:text-white underline font-mono"
+                            >
+                              Draft Reachout
+                            </button>
+                          </div>
+                          <p className="text-[11px] text-zinc-400 mt-0.5">{adv.lab}</p>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {adv.topics.slice(0, 3).map((t) => (
+                              <span key={t} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.04] text-zinc-300">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                          {adv.status && (
+                            <p className="text-[10px] text-amber-400/90 mt-2 font-mono">
+                              Status: {adv.status}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Deadlines footer */}
+                  {uni.deadlines.length > 0 && (
+                    <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono">
+                      <span className="text-zinc-400">{uni.deadlines[0].event}:</span>
+                      <span className={uni.deadlines[0].urgent ? "text-amber-400 font-semibold" : "text-zinc-300"}>
+                        {uni.deadlines[0].date} ({uni.deadlines[0].days_left}d left)
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Academic Email Drafter Panel */}
+            <div className="p-5 rounded-xl bg-[#121215] border border-white/[0.08] space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+                    <School size={16} className="text-emerald-400" /> Academic Reachout & Email Drafter
+                  </h3>
+                  <p className="text-xs text-zinc-400 mt-0.5">Formats formal correspondence adhering to Japanese institutional etiquette.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={emailPurpose}
+                    onChange={(e) => setEmailPurpose(e.target.value)}
+                    className="bg-zinc-900 border border-white/[0.08] text-xs rounded-lg px-2.5 py-1.5 text-zinc-200"
+                  >
+                    <option value="inquiry">Initial Inquiry / Proposal</option>
+                    <option value="followup">Follow-up / Documentation</option>
+                  </select>
+                  <button
+                    onClick={handleDraftEmail}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-medium hover:bg-emerald-500/30 transition-all"
+                  >
+                    Generate Email
+                  </button>
+                </div>
+              </div>
+
+              {draftedEmail && (
+                <div className="p-4 rounded-lg bg-zinc-900 border border-white/[0.08] space-y-3">
+                  <div className="flex items-center justify-between border-b border-white/[0.06] pb-2">
+                    <span className="text-xs font-mono text-zinc-300">Subject: {draftedEmail.subject}</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${draftedEmail.subject}\n\n${draftedEmail.body}`);
+                        setCopiedEmail(true);
+                        setTimeout(() => setCopiedEmail(false), 2000);
+                      }}
+                      className="flex items-center gap-1 text-xs font-mono text-zinc-400 hover:text-white"
+                    >
+                      {copiedEmail ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                      {copiedEmail ? "Copied!" : "Copy Full Text"}
+                    </button>
+                  </div>
+                  <pre className="text-xs font-mono text-zinc-300 whitespace-pre-wrap leading-relaxed max-h-56 overflow-y-auto">
+                    {draftedEmail.body}
+                  </pre>
+                </div>
+              )}
+            </div>
+
+            {/* Active Task Matrix */}
+            <div className="p-5 rounded-xl bg-[#121215] border border-white/[0.08] space-y-3">
+              <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+                <Target size={16} className="text-indigo-400" /> Master's Execution Task Matrix
+              </h3>
+              <div className="space-y-2">
+                {tasks.map((task) => (
+                  <div
+                    key={task.id}
+                    onClick={() => toggleTask(task.id)}
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-zinc-900 border border-white/[0.04] hover:border-white/10 cursor-pointer transition-all"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      {task.is_completed ? (
+                        <CheckCircle2 size={16} className="text-emerald-400" />
+                      ) : (
+                        <Circle size={16} className="text-zinc-400" />
+                      )}
+                      <span className={`text-xs ${task.is_completed ? 'line-through text-zinc-400' : 'text-zinc-200'}`}>
+                        {task.title}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.04] text-zinc-400">
+                      {task.priority}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
-
           </div>
         )}
 
-        {/* =========================================================
-            TAB 4: SUB-AGENTS (META-AGENT FACTORY)
-            ========================================================= */}
-        {activeTab === 'subagents' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            
-            {/* Deploy New Worker Capsule */}
-            <div className="bklit-card" style={{ padding: '18px 24px' }}>
-              <form onSubmit={handleSpawnSubagent} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        {/* TAB 3: NIHONGO DOJO (LANGUAGE LEARNING) */}
+        {activeTab === 'japanese' && (
+          <div className="h-full overflow-y-auto max-w-4xl mx-auto px-6 py-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold tracking-tight text-zinc-100 flex items-center gap-2">
+                  🎌 Nihongo Dojo (日本語)
+                </h2>
+                <p className="text-xs text-zinc-400 mt-1">Academic Lab Keigo, JLPT N5/N4 Grammar, and CS Tech terms with offline audio pronunciation.</p>
+              </div>
+              <button
+                onClick={startJapaneseQuiz}
+                className="px-3.5 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-medium hover:bg-indigo-500/30 transition-all flex items-center gap-1.5"
+              >
+                <HelpCircle size={14} /> Start Quiz Mode
+              </button>
+            </div>
+
+            {/* Category Filter Pills */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {[
+                { id: "all", label: "All Curricula" },
+                { id: "lab_keigo", label: "🔬 Academic Lab Keigo" },
+                { id: "tech_cs", label: "💻 Tech & CS Vocab" },
+                { id: "jlpt_n5_n4", label: "⛩️ JLPT N5/N4 Patterns" },
+                { id: "daily_life", label: "🍱 Daily Living in Japan" },
+              ].map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    setJapaneseCategory(c.id);
+                    fetchJapaneseCards(c.id);
+                  }}
+                  className={`text-xs px-3 py-1 rounded-full border transition-all ${
+                    japaneseCategory === c.id
+                      ? "bg-white text-zinc-950 font-semibold border-white"
+                      : "bg-[#121215] text-zinc-400 hover:text-white border-white/[0.08]"
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Interactive Flashcard with Flip Animation */}
+            {activeCard && !activeQuiz && (
+              <div className="flex flex-col items-center justify-center space-y-4 my-6">
+                <div
+                  onClick={() => setIsCardFlipped(!isCardFlipped)}
+                  className="w-full max-w-lg min-h-[260px] p-8 rounded-2xl bg-[#121215] border border-white/[0.08] hover:border-white/20 shadow-xl cursor-pointer flex flex-col justify-between transition-all duration-300 hover:scale-[1.01]"
+                >
+                  <div className="flex items-center justify-between text-xs font-mono text-zinc-400">
+                    <span className="px-2 py-0.5 rounded bg-white/[0.05] border border-white/[0.08] text-zinc-300">
+                      {activeCard.level}
+                    </span>
+                    <span>Click card to {isCardFlipped ? "view Kanji" : "reveal meaning"}</span>
+                  </div>
+
+                  {/* Card Front (Kanji & Hiragana) */}
+                  {!isCardFlipped ? (
+                    <div className="text-center py-6 space-y-3">
+                      <h3 className="text-2xl md:text-3xl font-semibold text-zinc-100 tracking-wide">
+                        {activeCard.kanji}
+                      </h3>
+                      <p className="text-sm font-normal text-emerald-400">
+                        {activeCard.hiragana}
+                      </p>
+                      <p className="text-xs font-mono text-zinc-400">
+                        {activeCard.romaji}
+                      </p>
+                    </div>
+                  ) : (
+                    /* Card Back (English Meaning & Usage Tip) */
+                    <div className="text-center py-6 space-y-3">
+                      <h4 className="text-lg font-medium text-emerald-300">
+                        {activeCard.meaning}
+                      </h4>
+                      <p className="text-xs text-zinc-400 max-w-md mx-auto italic leading-relaxed">
+                        💡 {activeCard.usage_tip}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Footer Audio Control */}
+                  <div className="flex items-center justify-between border-t border-white/[0.06] pt-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        speakJapanese(activeCard.kanji);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/[0.06] hover:bg-white/[0.12] text-xs font-medium text-zinc-200 transition-colors"
+                    >
+                      <Volume2 size={14} className="text-emerald-400" /> Pronounce (Native Audio)
+                    </button>
+                    <span className="text-[11px] font-mono text-zinc-400">
+                      Card {currentCardIndex + 1} of {japaneseCards.length}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Navigation Buttons */}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setIsCardFlipped(false);
+                      setCurrentCardIndex((prev) => (prev > 0 ? prev - 1 : japaneseCards.length - 1));
+                    }}
+                    className="px-4 py-2 rounded-lg bg-zinc-900 border border-white/[0.08] hover:bg-zinc-800 text-xs font-medium text-zinc-300"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsCardFlipped(false);
+                      const rand = Math.floor(Math.random() * japaneseCards.length);
+                      setCurrentCardIndex(rand);
+                    }}
+                    className="px-4 py-2 rounded-lg bg-zinc-900 border border-white/[0.08] hover:bg-zinc-800 text-xs font-medium text-zinc-300 flex items-center gap-1"
+                  >
+                    <RefreshCw size={13} /> Random
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsCardFlipped(false);
+                      setCurrentCardIndex((prev) => (prev < japaneseCards.length - 1 ? prev + 1 : 0));
+                    }}
+                    className="px-4 py-2 rounded-lg bg-zinc-900 border border-white/[0.08] hover:bg-zinc-800 text-xs font-medium text-zinc-300"
+                  >
+                    Next Card
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Quiz Mode Interface */}
+            {activeQuiz && (
+              <div className="p-6 rounded-2xl bg-[#121215] border border-white/[0.08] max-w-lg mx-auto space-y-5">
+                <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+                  <span className="text-xs font-mono text-zinc-400 uppercase tracking-widest">Interactive Quiz Mode</span>
+                  <button
+                    onClick={() => setActiveQuiz(null)}
+                    className="text-xs text-zinc-400 hover:text-white"
+                  >
+                    Exit Quiz
+                  </button>
+                </div>
+
+                <div className="text-center py-2 space-y-1">
+                  <h3 className="text-2xl font-bold text-zinc-100">{activeQuiz.prompt_kanji}</h3>
+                  <p className="text-xs text-emerald-400">{activeQuiz.prompt_hiragana}</p>
+                  <p className="text-xs font-mono text-zinc-400">{activeQuiz.prompt_romaji}</p>
+                </div>
+
+                <div className="space-y-2">
+                  {activeQuiz.options.map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => answerQuiz(opt)}
+                      className={`w-full text-left p-3 rounded-lg text-xs font-medium border transition-all ${
+                        quizSelectedOption === opt
+                          ? opt === activeQuiz.correct_answer
+                            ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
+                            : "bg-rose-500/20 border-rose-500/40 text-rose-300"
+                          : "bg-zinc-900 border-white/[0.06] text-zinc-300 hover:bg-zinc-800"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+
+                {quizFeedback && (
+                  <div className="p-3 rounded-lg bg-zinc-900 border border-white/[0.06] text-center space-y-2">
+                    <p className="text-xs font-semibold text-zinc-200">{quizFeedback}</p>
+                    <p className="text-[11px] text-zinc-400 italic">💡 {activeQuiz.usage_tip}</p>
+                    <button
+                      onClick={startJapaneseQuiz}
+                      className="mt-2 px-3 py-1 rounded bg-white/[0.1] hover:bg-white/[0.18] text-xs font-medium text-white"
+                    >
+                      Next Question
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 4: ACADEMIC & CITEX MCP */}
+        {activeTab === 'academic' && (
+          <div className="h-full overflow-y-auto max-w-4xl mx-auto px-6 py-6 space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight text-zinc-100">Academic Literature & CiteX MCP Engine</h2>
+              <p className="text-xs text-zinc-400 mt-1">Autonomous multi-source preprint scraping, BibTeX generation, and IEEE PDF compiler.</p>
+            </div>
+
+            {/* CiteX MCP Control Capsule */}
+            <div className="p-5 rounded-xl bg-[#121215] border border-white/[0.08] space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${citexOnline ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
+                  <span className="text-sm font-semibold text-zinc-200">CiteX Autonomous Research Engine</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.04] text-zinc-400">
+                    {citexOnline ? "Port :8000 Connected" : "Offline"}
+                  </span>
+                </div>
+                {!citexOnline && (
+                  <button
+                    onClick={async () => {
+                      await fetch("http://127.0.0.1:8765/api/mcp/citex/launch", { method: "POST" });
+                      setTimeout(checkCitexStatus, 3000);
+                    }}
+                    className="px-3 py-1 rounded bg-white/[0.08] hover:bg-white/[0.14] text-xs font-medium text-white transition-colors"
+                  >
+                    Launch CiteX Engine
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={citexQuery}
+                  onChange={(e) => setCitexQuery(e.target.value)}
+                  placeholder="Dispatch multi-source research (e.g. self-adaptive microservices)..."
+                  className="flex-1 bg-zinc-900 border border-white/[0.08] text-xs rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-white/20"
+                />
+                <button
+                  onClick={dispatchCitexResearch}
+                  disabled={!citexQuery.trim() || isDispatchingCitex}
+                  className="px-4 py-2 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-medium hover:bg-indigo-500/30 disabled:opacity-40"
+                >
+                  {isDispatchingCitex ? "Synthesizing..." : "Dispatch to CiteX"}
+                </button>
+              </div>
+            </div>
+
+            {/* ArXiv Research Satellite */}
+            <div className="p-5 rounded-xl bg-[#121215] border border-white/[0.08] space-y-4">
+              <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-2">
+                <BookOpen size={16} className="text-emerald-400" /> ArXiv Satellite & PDF Brief Generator
+              </h3>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={researchQuery}
+                  onChange={(e) => setResearchQuery(e.target.value)}
+                  placeholder="Query topic or author (e.g., Kenji Tei self-adaptive systems)..."
+                  className="flex-1 bg-zinc-900 border border-white/[0.08] text-xs rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-white/20"
+                />
+                <button
+                  onClick={triggerAcademicSearch}
+                  disabled={!researchQuery.trim() || isSearchingPaper}
+                  className="px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-medium hover:bg-emerald-500/30 disabled:opacity-40"
+                >
+                  {isSearchingPaper ? "Searching..." : "Synthesize Brief"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: SYSTEM & CODE SANDBOX */}
+        {activeTab === 'system' && (
+          <div className="h-full overflow-y-auto max-w-4xl mx-auto px-6 py-6 space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight text-zinc-100">Python Code Sandbox & Subagents</h2>
+              <p className="text-xs text-zinc-400 mt-1">Isolated computational REPL and autonomous worker execution runtime.</p>
+            </div>
+
+            {/* Python Code Sandbox */}
+            <div className="p-5 rounded-xl bg-[#121215] border border-white/[0.08] space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-2">
+                  <Code size={16} className="text-emerald-400" /> Python REPL & Computation Sandbox
+                </h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSandboxCode(
+`# JASSO 3.0 Scale GPA Conversion Formula
+def calculate_jasso_gpa(grade_points):
+    # grade_points: list of course grades out of 10
+    converted = [((g - 1) / 9.0) * 3.0 for g in grade_points]
+    jasso_gpa = sum(converted) / len(converted)
+    return {"original_avg": round(sum(grade_points)/len(grade_points), 2), "jasso_gpa": round(jasso_gpa, 2)}
+
+print(calculate_jasso_gpa([8.5, 9.0, 7.8, 8.9, 9.2]))`
+                    )}
+                    className="text-[10px] font-mono px-2 py-1 rounded bg-white/[0.04] text-zinc-400 hover:text-white"
+                  >
+                    Preset: JASSO GPA
+                  </button>
+                  <button
+                    onClick={executeSandbox}
+                    disabled={isExecutingCode}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-medium hover:bg-emerald-500/30 disabled:opacity-40"
+                  >
+                    {isExecutingCode ? "Executing..." : "Run Sandbox"}
+                  </button>
+                </div>
+              </div>
+
+              <textarea
+                value={sandboxCode}
+                onChange={(e) => setSandboxCode(e.target.value)}
+                rows={7}
+                className="w-full p-3 rounded-lg bg-zinc-900 border border-white/[0.08] text-xs font-mono text-zinc-200 focus:outline-none focus:border-white/20 resize-y"
+              />
+
+              {sandboxResult && (
+                <div className="p-3 rounded-lg bg-zinc-900 border border-white/[0.08] text-xs font-mono space-y-1">
+                  <div className="flex items-center justify-between text-zinc-400">
+                    <span>Execution Result:</span>
+                    <span>{sandboxResult.execution_time_ms} ms</span>
+                  </div>
+                  <pre className="text-emerald-400 whitespace-pre-wrap">
+                    {sandboxResult.stdout || sandboxResult.stderr || "Executed with zero output."}
+                  </pre>
+                </div>
+              )}
+            </div>
+
+            {/* Sub-Agent Spawner & Workers Panel */}
+            <div className="p-5 rounded-xl bg-[#121215] border border-white/[0.08] space-y-4">
+              <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-2">
+                <Bot size={16} className="text-indigo-400" /> Autonomous Sub-Agents
+              </h3>
+
+              <div className="flex items-center gap-2">
                 <input
                   type="text"
                   value={newAgentPrompt}
                   onChange={(e) => setNewAgentPrompt(e.target.value)}
-                  placeholder="Prompt Meta-Agent (e.g. 'Deploy a worker to monitor Redis Streams latency')..."
-                  className="bklit-input-field"
-                  style={{ background: 'var(--bg-muted)', padding: '10px 16px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}
+                  placeholder="Deploy new worker (e.g. monitor SIT admission guidelines)..."
+                  className="flex-1 bg-zinc-900 border border-white/[0.08] text-xs rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-white/20"
                 />
-                <button type="submit" disabled={isSpawningAgent || !newAgentPrompt.trim()} className="action-btn primary" style={{ padding: '10px 20px', whiteSpace: 'nowrap' }}>
-                  <Plus size={14} /> {isSpawningAgent ? "Synthesizing..." : "Deploy Worker"}
+                <button
+                  onClick={async () => {
+                    if (!newAgentPrompt.trim() || isSpawningAgent) return;
+                    setIsSpawningAgent(true);
+                    await fetch("http://127.0.0.1:8765/api/subagents", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ prompt: newAgentPrompt })
+                    });
+                    setIsSpawningAgent(false);
+                    setNewAgentPrompt("");
+                  }}
+                  disabled={!newAgentPrompt.trim() || isSpawningAgent}
+                  className="px-4 py-2 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-medium hover:bg-indigo-500/30 disabled:opacity-40"
+                >
+                  Deploy Worker
                 </button>
-              </form>
-            </div>
+              </div>
 
-            {/* Sub-Agents Grid */}
-            <div className="bklit-grid-3">
-              {subagents.map(ag => (
-                <div key={ag.id} className="bklit-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '180px' }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                      <div>
-                        <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff' }}>{ag.name}</h4>
-                        <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{ag.role}</span>
+              <div className="space-y-2 mt-3">
+                {subagents.map((ag) => (
+                  <div key={ag.id} className="p-3 rounded-lg bg-zinc-900 border border-white/[0.04] flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-zinc-200">{ag.name}</span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.04] text-zinc-400">{ag.status}</span>
                       </div>
-                      <span className={`bklit-badge ${ag.status === 'RUNNING' ? 'green' : ''}`}>{ag.status}</span>
+                      <p className="text-[11px] text-zinc-400 mt-0.5">{ag.role}</p>
                     </div>
-
-                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', margin: '10px 0' }}>
-                      {ag.tools_bound.map((tool, idx) => (
-                        <span key={idx} style={{ fontSize: '9.5px', fontFamily: 'var(--font-mono)', background: 'var(--bg-muted)', padding: '2px 7px', borderRadius: '4px', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
-                          {tool}
-                        </span>
-                      ))}
-                    </div>
-
-                    {ag.last_output && (
-                      <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', background: '#09090b', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-subtle)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {ag.last_output}
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
-                    <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
-                      {ag.last_run ? `Run: ${ag.last_run.slice(11, 16)}` : "Awaiting run"}
-                    </span>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <button onClick={() => handleRunSubagent(ag.id)} className="action-btn" title="Execute Sub-Agent">
-                        <Play size={11} /> Run
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={async () => {
+                          await fetch(`http://127.0.0.1:8765/api/subagents/${ag.id}/run`, { method: "POST" });
+                        }}
+                        className="p-1.5 rounded bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300"
+                        title="Run agent"
+                      >
+                        <Play size={13} />
                       </button>
-                      <button onClick={() => handleDeleteSubagent(ag.id)} className="action-btn" title="Delete">
-                        <Trash2 size={11} color="#ef4444" />
+                      <button
+                        onClick={async () => {
+                          await fetch(`http://127.0.0.1:8765/api/subagents/${ag.id}`, { method: "DELETE" });
+                        }}
+                        className="p-1.5 rounded bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300"
+                        title="Decommission"
+                      >
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-
           </div>
         )}
 

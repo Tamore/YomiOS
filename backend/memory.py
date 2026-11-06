@@ -128,3 +128,4 @@ def get_recent_chat(session_id: str = "default", limit: int = 8) -> List[Dict[st
 
 # Initialize on module load
 init_memory_schema()
+

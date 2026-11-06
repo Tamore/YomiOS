@@ -25,6 +25,7 @@ from tools.paper_reader import document_reader
 from tools.web_intelligence import live_web_search, scrape_webpage_markdown
 from tools.code_sandbox import execute_python_code
 from tools.workspace_manager import list_workspace_files, save_research_note, analyze_proposal_stats
+from tools.japanese_tutor import get_random_card, generate_quiz_question, get_all_flashcards
 from mcp_connector import mcp_connector
 
 SYSTEM_PROMPT = """You are Yomi, an elite, witty, and exceptionally sharp executive AI companion and research chief of staff.
@@ -62,7 +63,43 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
         }
 
     # -------------------------------------------------------------
-    # 2. MCP CONNECTOR & CITEX AGENT BRIDGE
+    # 2. JAPANESE LANGUAGE TUTOR & ACADEMIC KEIGO
+    # e.g., "japanese quiz", "japanese card", "lab japanese", "practice japanese"
+    # -------------------------------------------------------------
+    if any(q in lower for q in ["japanese quiz", "nihongo quiz", "test my japanese"]):
+        quiz = generate_quiz_question()
+        opts_text = "\n".join([f"  {idx+1}. {opt}" for idx, opt in enumerate(quiz['options'])])
+        reply = (
+            f"**Japanese Drill ({quiz['category'].upper()})**\n\n"
+            f"**{quiz['prompt_kanji']}** ({quiz['prompt_romaji']})\n"
+            f"*{quiz['prompt_hiragana']}*\n\n"
+            f"What does this mean?\n{opts_text}\n\n"
+            f"*(Correct: {quiz['correct_answer']})*"
+        )
+        return {
+            "reply": reply,
+            "tool_used": "japanese_quiz",
+            "data": quiz
+        }
+
+    if any(q in lower for q in ["japanese card", "japanese flashcard", "learn japanese", "lab japanese", "japanese phrase"]):
+        cat = "lab_keigo" if "lab" in lower or "professor" in lower else None
+        card = get_random_card(cat)
+        reply = (
+            f"**{card['kanji']}**\n"
+            f"• Hiragana: *{card['hiragana']}*\n"
+            f"• Romaji: `{card['romaji']}`\n"
+            f"• Meaning: **{card['meaning']}**\n\n"
+            f"💡 *Usage Tip:* {card['usage_tip']}"
+        )
+        return {
+            "reply": reply,
+            "tool_used": "japanese_flashcard",
+            "data": card
+        }
+
+    # -------------------------------------------------------------
+    # 3. MCP CONNECTOR & CITEX AGENT BRIDGE
     # e.g., "citex status", "launch citex", "ask citex to research self-adaptive systems", "citex notes"
     # -------------------------------------------------------------
     if any(q in lower for q in ["citex status", "mcp status", "check citex", "is citex running"]):

@@ -90,3 +90,4 @@ class DocumentReader:
             return {"success": False, "error": str(e)}
 
 document_reader = DocumentReader()
+
