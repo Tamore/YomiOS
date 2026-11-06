@@ -22,12 +22,20 @@
   --chart-positive: oklch(0.268 0.004 163.223);
   --chart-negative: oklch(0 0 22.216);
 
+  /* Bklit Sequential Heatmap Scale (from packages/studio bklit-tokens.css) */
+  --chart-scale-mix: oklch(0.25 0 0);
+  --chart-scale-01: #18181b;
+  --chart-scale-02: color-mix(in oklab, var(--chart-1) 35%, var(--chart-scale-mix));
+  --chart-scale-03: color-mix(in oklab, var(--chart-1) 55%, var(--chart-scale-mix));
+  --chart-scale-04: color-mix(in oklab, var(--chart-1) 78%, var(--chart-scale-mix));
+  --chart-scale-05: var(--chart-1);
+
   /* Heatmap Colors */
-  --heat-0: #18181b;
-  --heat-1: #381523;
-  --heat-2: #6d1b3d;
-  --heat-3: #b32a59;
-  --heat-4: oklch(0.756 0.211 0);
+  --heat-0: var(--chart-scale-01);
+  --heat-1: var(--chart-scale-02);
+  --heat-2: var(--chart-scale-03);
+  --heat-3: var(--chart-scale-04);
+  --heat-4: var(--chart-scale-05);
 
   /* Hairline Precision Borders */
   --border-subtle: rgba(255, 255, 255, 0.08);
