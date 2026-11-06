@@ -312,7 +312,7 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* 2. MAIN ACTIVE VIEWS (in Bklit Frame/FramePanel containers)   */}
       {/* ------------------------------------------------------------- */}
-      <main className="w-full max-w-[1280px] space-y-8">
+      <main className="w-full max-w-[1280px] space-y-8 pb-20">
 
         {/* ------------------------------------------------------------- */}
         {/* VIEW 1: INTELLIGENCE HUD                                      */}
@@ -1048,42 +1048,41 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* 3. FLOATING MINIMIZABLE/MAXIMIZABLE STICKY WINDOW             */}
       {/* ------------------------------------------------------------- */}
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-5 right-5 z-50">
         {!isWindowOpen ? (
           <div 
             onClick={() => setIsWindowOpen(true)}
-            className="cursor-pointer relative flex flex-col rounded-full bg-white/[0.04] p-1 border border-white/[0.12] shadow-2xl backdrop-blur-xl hover:border-white/[0.24] transition-all"
+            className="cursor-pointer group flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0e0e11]/90 hover:bg-[#16161a] border border-white/[0.12] hover:border-white/[0.24] shadow-xl backdrop-blur-md transition-all"
+            title="Open Pipeline & Actions"
           >
-            <div className="relative rounded-full px-4 py-2 flex items-center gap-3 bg-[#0e0e11]">
-              <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--chart-1)' }} />
-              <span className="text-xs font-medium text-white">Pipeline & Actions</span>
-              <span className="text-[10px] font-mono text-zinc-400">
-                3 Unis · {actionTasks.filter(t => !t.completed).length} Tasks
-              </span>
-              <ChevronUp className="w-3.5 h-3.5 text-zinc-400" />
-            </div>
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: 'var(--chart-1)' }} />
+            <span className="text-[11px] font-medium tracking-tight text-white group-hover:text-zinc-200">Pipeline</span>
+            <span className="text-[10px] font-mono text-zinc-400">
+              3 · {actionTasks.filter(t => !t.completed).length}
+            </span>
+            <ChevronUp className="w-3 h-3 text-zinc-400 group-hover:text-white transition-colors" />
           </div>
         ) : (
-          <div className="w-96 md:w-[420px] max-h-[580px] relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.12] shadow-2xl backdrop-blur-2xl transition-all">
+          <div className="w-80 md:w-[360px] max-h-[500px] relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.12] shadow-2xl backdrop-blur-2xl transition-all">
             <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] overflow-hidden flex flex-col">
               
               {/* Header */}
-              <div className="px-5 py-3.5 border-b border-white/[0.08] flex items-center justify-between bg-black/40">
+              <div className="px-4 py-2.5 border-b border-white/[0.08] flex items-center justify-between bg-black/40">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--chart-1)' }} />
-                  <span className="text-xs font-semibold tracking-tight text-white">Executive Pipeline & Actions</span>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--chart-1)' }} />
+                  <span className="text-xs font-semibold tracking-tight text-white">Pipeline & Actions</span>
                 </div>
                 <button 
                   onClick={() => setIsWindowOpen(false)}
-                  className="p-1 rounded text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all"
+                  className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all"
                   title="Minimize window"
                 >
-                  <ChevronDown className="w-3.5 h-3.5" />
+                  <ChevronDown className="w-3 h-3" />
                 </button>
               </div>
 
               {/* Sub Tabs */}
-              <div className="p-2 border-b border-white/[0.06] bg-black/20 flex gap-1">
+              <div className="p-1.5 border-b border-white/[0.06] bg-black/20 flex gap-1">
                 <button 
                   onClick={() => setStickyTab('pipeline')}
                   className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
@@ -1103,7 +1102,7 @@ export default function App() {
               </div>
 
               {/* Body with Custom Sleek Scrollbar */}
-              <div className="flex-1 overflow-y-auto card-scroll p-4 space-y-4 max-h-[440px]">
+              <div className="flex-1 overflow-y-auto card-scroll p-3.5 space-y-3 max-h-[380px]">
                 {stickyTab === 'pipeline' ? (
                   <div className="space-y-3">
                     {/* SIT: In Dialogue */}
