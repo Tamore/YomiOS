@@ -250,15 +250,27 @@ export default function App() {
         <header className="relative flex flex-col rounded-2xl bg-white/[0.04] p-1 border border-white/[0.07]">
           <div className="relative rounded-xl border border-white/[0.07] bg-[#0e0e11] py-3 px-5 flex flex-wrap items-center justify-between gap-4">
             
-            {/* Official Bklit Logo SVG */}
+            {/* Custom Yomi Brandmark & Typography */}
             <div className="flex items-center gap-3">
-              <svg className="w-4 h-6 text-white" viewBox="0 0 112 179" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M11.082 88.6498C11.082 88.6498 24.4884 66.4873 55.407 66.4873C84.2319 66.4873 99.732 88.6498 99.732 88.6498C99.732 88.6498 86.1801 110.813 55.407 110.812C26.7612 110.812 11.082 88.6498 11.082 88.6498Z" fill="white" fillOpacity="0.9"/>
-                <path d="M110.812 121.894C110.812 148.67 90.0415 177.3 55.4062 177.3V110.812C55.4062 110.812 83.2175 112.19 99.7312 88.6499C108.153 99.9149 110.812 111.675 110.812 121.894Z" fill="white" fillOpacity="0.6"/>
-                <path d="M0 121.894C0 148.67 20.771 177.3 55.4062 177.3V110.812C55.4062 110.812 29.4726 112.262 11.0813 88.6499C2.65942 99.9149 0 111.675 0 121.894Z" fill="white" fillOpacity="0.3"/>
+              <svg 
+                className="w-5 h-5" 
+                viewBox="0 0 32 32" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
+                aria-label="Yomi Logo"
+              >
+                {/* Yomi Brandmark: Tri-Vector Intelligence Nexus */}
+                {/* Left Ray: Perception & Research (Opaque White) */}
+                <path d="M7 6L16 16" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+                {/* Right Ray: Cognition & Synthesis (Translucent White 45%) */}
+                <path d="M25 6L16 16" stroke="white" strokeOpacity="0.45" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+                {/* Base Anchor: Executive Execution (Custom Rose Accent) */}
+                <path d="M16 16V26" stroke="var(--chart-1)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+                {/* Central Nexus Core */}
+                <circle cx="16" cy="16" r="2" fill="white" />
               </svg>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-sm tracking-tight text-white">Yomi OS</span>
+                <span className="font-bold text-sm tracking-tight text-white">Yomi</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-zinc-400">
                   v2.0 · Bklit Engine
                 </span>
@@ -1017,7 +1029,7 @@ export default function App() {
                         <span className="text-[10px] font-mono text-emerald-400">Synced @ cb60235</span>
                       </div>
                       <p className="text-xs text-zinc-400">
-                        Clean upstream deployment repository for Yomi OS 2.0 and research documentation.
+                        Clean upstream deployment repository for Yomi and research documentation.
                       </p>
                     </div>
                   </div>
