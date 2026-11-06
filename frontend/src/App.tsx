@@ -260,40 +260,28 @@ export default function App() {
                 aria-label="Yomi Brandmark"
               >
                 <defs>
-                  <linearGradient id="yomi-blade-l" x1="6" y1="5" x2="16" y2="17" gradientUnits="userSpaceOnUse">
+                  <linearGradient id="yomi-kamon-rose" x1="16" y1="12" x2="16" y2="28" gradientUnits="userSpaceOnUse">
                     <stop offset="0%" stopColor="#ffffff" />
-                    <stop offset="100%" stopColor="#d4d4d8" />
-                  </linearGradient>
-                  <linearGradient id="yomi-blade-r" x1="26" y1="5" x2="16" y2="17" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#ffffff" stopOpacity="0.75" />
-                    <stop offset="100%" stopColor="#71717a" stopOpacity="0.35" />
-                  </linearGradient>
-                  <linearGradient id="yomi-keel" x1="16" y1="15" x2="16" y2="28" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#fb7185" />
+                    <stop offset="40%" stopColor="#fb7185" />
                     <stop offset="100%" stopColor="#e11d48" />
+                  </linearGradient>
+                  <linearGradient id="yomi-kamon-white" x1="7" y1="4" x2="16" y2="13" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#ffffff" />
+                    <stop offset="100%" stopColor="#e4e4e7" />
                   </linearGradient>
                 </defs>
 
-                {/* Left Aerodynamic Wing (Perception & 読み) */}
-                <path 
-                  d="M6 6C6 5.45 6.45 5 7 5H12C12.6 5 13.15 5.35 13.4 5.9L16 11.5L12.5 14.5L6.5 8C6.18 7.65 6 7.18 6 6.7V6Z" 
-                  fill="url(#yomi-blade-l)" 
-                />
+                {/* Top Left Diamond Facet (Perception / 読み) */}
+                <polygon points="16,4 7,13 13,13 16,10" fill="url(#yomi-kamon-white)" />
                 
-                {/* Right Aerodynamic Wing (Synthesis & Cognition) */}
-                <path 
-                  d="M26 6C26 5.45 25.55 5 25 5H20C19.4 5 18.85 5.35 18.6 5.9L16 11.5L19.5 14.5L25.5 8C25.82 7.65 26 7.18 26 6.7V6Z" 
-                  fill="url(#yomi-blade-r)" 
-                />
+                {/* Top Right Diamond Facet (Synthesis & Cognition) */}
+                <polygon points="16,4 25,13 19,13 16,10" fill="#ffffff" fillOpacity="0.45" />
 
-                {/* Center Tapered Keel (Action & Execution in Rose) */}
-                <path 
-                  d="M14 15.5H18L17.2 26.2C17.15 27 16.5 27.5 16 27.5C15.5 27.5 14.85 27 14.8 26.2L14 15.5Z" 
-                  fill="url(#yomi-keel)" 
-                />
+                {/* Lower Keel Diamond (Action & Execution in Rose) */}
+                <polygon points="16,13 21,18 16,28 11,18" fill="url(#yomi-kamon-rose)" />
 
-                {/* Suspended Diamond Core (Neural Aperture) */}
-                <polygon points="16,13 18.5,15.5 16,18 13.5,15.5" fill="#ffffff" />
+                {/* Architectural Negative Space Core */}
+                <polygon points="16,7 13.5,11.5 18.5,11.5" fill="#0e0e11" />
               </svg>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm tracking-tight text-white">Yomi</span>
