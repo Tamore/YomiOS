@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "citex": {
+      "name": "CiteX Autonomous Research Engine",
+      "type": "http",
+      "url": "http://127.0.0.1:8000",
+      "description": "Multi-source academic literature review, faculty radar, and IEEE paper compiler engine.",
+      "tools": [
+        "citex_research",
+        "citex_synthesize",
+        "citex_papers",
+        "citex_folders"
+      ]
+    }
+  }
+}

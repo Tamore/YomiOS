@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "yomi-os-memory": {
+      "command": "python",
+      "args": ["-m", "backend.mcp_server"],
+      "cwd": "D:\\Projects\\yomi-assistant",
+      "env": {
+        "PYTHONIOENCODING": "utf-8",
+        "YOMI_WORKSPACE_DIR": "D:\\"
+      }
+    }
+  }
+}
+
