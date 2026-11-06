@@ -166,6 +166,29 @@ As autonomous artificial intelligence agents transition from single-prompt reaso
   - 1-click execution (`Play`), decommissioning (`Trash`), and dynamic agent prompt deployment capsule.
   - Production bundle verified (`dist/` compiled cleanly in $1.43\text{s}$).
 
+### Milestone 8: Sovereign Multi-Tool Suite, Hybrid Brain & Persistent Profile Memory
+* **Date:** 6 November 2026
+* **Status:** Complete & Empirically Validated ✅
+* **Objectives:**
+  - Build persistent neural memory architecture (`backend/memory.py`) in SQLite with auto-recall of applicant credentials, research topics, target professors, and preferences.
+  - Implement **Unified Multi-Provider LLM Client** (`backend/llm_client.py`) supporting local Ollama (`qwen2.5:7b`), Gemini API, and Groq with sub-2s connect timeout fallback.
+  - Expand tool suite in `backend/tools/`:
+    - `admissions_engine.py`: University matrices (SIT, Waseda IPS, NAIST, Science Tokyo, Ritsumeikan), deadline calculator, thematic lab matching algorithm, and Japanese academic email drafter.
+    - `paper_reader.py`: Local PDF inspection, metadata extraction, and in-document requirement search via `pypdf`.
+    - `web_intelligence.py`: Zero-key live web search via DuckDuckGo HTML parser and clean markdown scraper.
+    - `code_sandbox.py`: Safe isolated Python REPL runner with execution time tracking and timeout protection.
+    - `workspace_manager.py`: Proposal word-count / section analyzer and research note logger.
+  - Expose 34 verified REST & WebSocket endpoints in `backend/main.py`.
+
+### Milestone 9: Bidirectional Model Context Protocol (MCP) Bridge, CiteX Connector & GitHub Sync
+* **Date:** 6 November 2026
+* **Status:** Complete, Bridged & Deployed to GitHub ✅
+* **Objectives:**
+  - Engineer **MCP Connector** (`backend/mcp_connector.py` & `backend/mcp_servers.json`) enabling Yomi to act as both an MCP server host and an MCP client.
+  - Bridge Nirmiti's **CiteX** autonomous research engine (`http://127.0.0.1:8000`), enabling cross-app literature reviews (OpenAlex, Zenodo, ArXiv) and automatic IEEE LaTeX / PDF compilation directly from Yomi.
+  - Cleanly decommission legacy Next.js/Prisma prototype from [`github.com/Tamore/YomiOS`](https://github.com/Tamore/YomiOS).
+  - Deploy complete Yomi OS 2.0 monorepo (Bklit UI, backend tools, MCP connector, official Bklit Agent Skills) to GitHub `main` branch (Commit `8a31cf9`).
+
 ---
 
 ## 🎓 Master's Thesis Proposal Alignment (Japan AY2027)
