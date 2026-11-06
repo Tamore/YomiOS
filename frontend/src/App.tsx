@@ -254,20 +254,6 @@ export default function App() {
               </button>
             </nav>
 
-            {/* Trigger for Floating Pipeline Window */}
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => setIsWindowOpen(prev => !prev)}
-                className="h-8 gap-1.5 px-3 rounded-lg border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] text-xs font-mono font-medium flex items-center transition-all text-zinc-200"
-              >
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--chart-1)' }} />
-                <span>Pipeline & Actions</span>
-                <span className="text-[10px] text-zinc-400 font-mono">
-                  {actionTasks.filter(t => !t.completed).length} Pending
-                </span>
-              </button>
-            </div>
-
           </div>
         </header>
       </div>
@@ -1026,15 +1012,15 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Body */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[440px]">
+              {/* Body with Custom Sleek Scrollbar */}
+              <div className="flex-1 overflow-y-auto card-scroll p-4 space-y-4 max-h-[440px]">
                 {stickyTab === 'pipeline' ? (
                   <div className="space-y-3">
-                    {/* SIT */}
+                    {/* SIT: In Dialogue */}
                     <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold text-white">Shibaura Inst. of Tech (SIT)</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border" style={{ color: 'var(--chart-1)', backgroundColor: 'rgba(251, 113, 133, 0.08)', borderColor: 'rgba(251, 113, 133, 0.2)' }}>
                           Replied
                         </span>
                       </div>
@@ -1044,11 +1030,11 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Waseda */}
+                    {/* Waseda: Window Approaching */}
                     <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold text-white">Waseda University (IPS)</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.04] text-zinc-300 border border-white/[0.08]">
                           Opens Dec 1
                         </span>
                       </div>
@@ -1058,11 +1044,11 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Science Tokyo */}
+                    {/* Science Tokyo: Under Review */}
                     <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold text-white">Institute of Science Tokyo</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.04] text-zinc-300 border border-white/[0.08]">
                           In Review
                         </span>
                       </div>
@@ -1072,11 +1058,11 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* NAIST */}
+                    {/* NAIST: Pending */}
                     <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold text-white">NAIST</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.04] text-zinc-400 border border-white/[0.06]">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.02] text-zinc-400 border border-white/[0.06]">
                           Pending Contact
                         </span>
                       </div>
@@ -1090,7 +1076,7 @@ export default function App() {
                     <div className="p-3.5 rounded-xl bg-white/[0.01] border border-white/[0.04] opacity-50 space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-zinc-500 line-through">Osaka University (AAD)</span>
-                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500 line-through">
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-500 border border-zinc-800 line-through">
                           Struck Out
                         </span>
                       </div>
@@ -1109,7 +1095,7 @@ export default function App() {
                       >
                         <button className="mt-0.5 text-zinc-400 hover:text-white">
                           {task.completed ? (
-                            <CheckSquare className="w-4 h-4 text-emerald-400" />
+                            <CheckSquare className="w-4 h-4" style={{ color: 'var(--chart-1)' }} />
                           ) : (
                             <Square className="w-4 h-4 text-zinc-600" />
                           )}
