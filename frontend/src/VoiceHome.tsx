@@ -11,28 +11,49 @@ function Orb({ phase }: { phase: Phase }) {
     if (!ctx || phase === 'idle') return;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0;
-    const start = performance.now();
     function draw(now: number) {
       if (!ctx) return;
-      const t = reduced.matches ? 0 : (now - start) / 1000;
-      const r = 144 + (phase === 'thinking' ? -7 : phase === 'speaking' ? 14 * Math.abs(Math.sin(7*t)*Math.cos(2.7*t)) : 0);
+      const t = reduced.matches ? 0 : now / 1000;
+      const beat = phase === 'speaking' ? Math.abs(Math.sin(t*7) * Math.cos(t*2.7)) : 0;
+      const radius = 139 + 4*Math.sin(t*1.4) + 15*beat;
       ctx.clearRect(0, 0, 880, 440);
-      ctx.lineWidth = 1.35;
-      for (let j = 0; j < 64; j++) {
-        const v = (j - 31.5) / 32;
+      ctx.save();
+      ctx.translate(440, 220);
+      const halo = ctx.createRadialGradient(0, 0, 62, 0, 0, 215);
+      halo.addColorStop(0, 'transparent');
+      halo.addColorStop(.56, 'rgba(244,65,141,.13)');
+      halo.addColorStop(1, 'transparent');
+      ctx.fillStyle = halo;
+      ctx.fillRect(-220,-220,440,440);
+      ctx.globalCompositeOperation = 'lighter';
+      // Offset closed curves form a folded ribbon; the moving highlight reveals its depth.
+      const angle = t*.7;
+      const ink = ctx.createLinearGradient(-160*Math.cos(angle),-160*Math.sin(angle),160*Math.cos(angle),160*Math.sin(angle));
+      ink.addColorStop(0,'#923262');
+      ink.addColorStop(.42,'#f168a1');
+      ink.addColorStop(.72,'#ffd3d9');
+      ink.addColorStop(1,'#df5488');
+      ctx.strokeStyle = ink;
+      for (let strand = 0; strand < 44; strand++) {
+        const v = strand/43;
+        ctx.globalAlpha = .18 + .36*Math.pow(Math.abs(2*v-1),4);
+        ctx.lineWidth = strand === 43 ? 2 : 1.15;
         ctx.beginPath();
-        for (let i = 0; i <= 96; i++) {
-          const u = i / 48 - 1;
-          const x = 440 + u*r;
-          const y = 220 + Math.sqrt(1-u*u)*r*(v + .27*(1-v*v)*Math.sin(u*5 + v*2 + t*(phase === 'thinking' ? .45 : 1.9)));
-          if (i === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        for (let point = 0; point <= 144; point++) {
+          const a = point * Math.PI/72;
+          const fold = Math.sin(3*a - t + 2.1*v);
+          const r = radius + 16*fold + 8*Math.cos(2*a+t*.64) + 19*(v-.5);
+          const x = r*Math.cos(a) + 10*Math.sin(2*a+t*.6);
+          const y = r*Math.sin(a)*(.63 + .35*v) + 25*(1-v)*Math.sin(2*a+t*.85);
+          if (point === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
         }
-        ctx.strokeStyle = `rgba(255,134,177,${.35+.5*(1-Math.abs(v))})`;
+        ctx.closePath();
         ctx.stroke();
       }
-      if (!reduced.matches && phase !== 'quiet') frame = requestAnimationFrame(draw);
+      ctx.restore();
+      if (!reduced.matches) frame = requestAnimationFrame(draw);
     }
-    draw(start);
+    draw(performance.now());
     return () => cancelAnimationFrame(frame);
   }, [phase]);
   return <canvas ref={ref} width={880} height={440} aria-hidden="true" />;
