@@ -337,7 +337,15 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* 2. MAIN ACTIVE VIEWS                                          */}
       {/* ------------------------------------------------------------- */}
-      <main className="bklit-container space-y-8 pb-20">
+      <main className="bklit-container dashboard-motion space-y-8 pb-20"
+        onPointerMove={event => {
+          if (event.pointerType === 'touch' || !(event.target instanceof Element)) return;
+          const card = event.target.closest<HTMLElement>('.bklit-frame');
+          if (!card) return;
+          const bounds = card.getBoundingClientRect();
+          card.style.setProperty('--glow-x', (event.clientX - bounds.left) + 'px');
+          card.style.setProperty('--glow-y', (event.clientY - bounds.top) + 'px');
+        }}>
 
         {/* ------------------------------------------------------------- */}
         {/* VIEW 1: INTELLIGENCE HUD                                      */}
