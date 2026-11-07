@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import './voice-home.css';
+import TrailGrid from './TrailGrid';
 
 type Props = { panel: boolean; setPanel: (value: boolean) => void; openDashboard: () => void };
 type Phase = 'idle' | 'listening' | 'thinking' | 'speaking' | 'quiet';
@@ -63,8 +64,6 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
   const [phase, setPhase] = useState<Phase>('idle');
   const timers = useRef<number[]>([]);
   const manuallyToggled = useRef(false);
-  const grid = useRef<HTMLDivElement>(null);
-  const cell = useRef<HTMLDivElement>(null);
   function clearTimers() { timers.current.forEach(window.clearTimeout); timers.current = []; }
   useEffect(() => clearTimers, []);
   function play() {
@@ -81,13 +80,9 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
   }
   const caption = phase === 'speaking' ? '“Here’s your pipeline.”' : phase === 'thinking' || phase === 'listening' ? '“Hey Yomi, show my pipeline.”' : '';
   return <section className={`voice-home ${phase === 'idle' ? '' : 'awake'} ${panel ? 'with-panel' : ''}`}
-    onPointerMove={e => {
-      if (!grid.current || !cell.current || e.pointerType === 'touch') return;
-      const { left, top } = grid.current.getBoundingClientRect();
-      cell.current.style.transform = `translate(${left+48*Math.floor((e.clientX-left)/48)}px,${top+48*Math.floor((e.clientY-top)/48)}px)`;
-    }}>
-    <div ref={grid} className="voice-grid" /><div ref={cell} className="voice-cell" />
-    <header><span>Yomi</span><nav><button onClick={openDashboard}>Dashboard</button><button aria-expanded={panel} onClick={() => { manuallyToggled.current = true; setPanel(!panel); }}>{panel ? 'Hide pipeline' : 'Show pipeline'}</button></nav></header>
+>
+    <TrailGrid />
+    <header><img src={import.meta.env.BASE_URL + 'yomi-symbol.svg'} alt="Yomi" width="32" height="32" /><nav><button onClick={openDashboard}>Dashboard</button><button aria-expanded={panel} onClick={() => { manuallyToggled.current = true; setPanel(!panel); }}>{panel ? 'Hide pipeline' : 'Show pipeline'}</button></nav></header>
     <div className="voice-center"><div className="voice-stage"><img src={import.meta.env.BASE_URL+'yomi-b1.webp'} alt="Yomi" /><Orb phase={phase}/><div className="voice-caption" aria-live="polite"><span key={caption}>{caption}</span></div></div></div>
     <footer><button onClick={play}>{phase === 'idle' ? 'Play “Hey Yomi” demo' : 'Return to wordmark'}</button></footer>
   </section>;
