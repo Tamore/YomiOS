@@ -1,0 +1,26 @@
+.voice-home{position:fixed;inset:0;overflow:hidden;background:#09090b;color:#eee;font:15px system-ui}
+.voice-grid{position:absolute;inset:-48px;background-image:linear-gradient(#38383f66 1px,transparent 1px),linear-gradient(90deg,#38383f66 1px,transparent 1px);background-size:48px 48px;mask-image:radial-gradient(ellipse,#0001,#000 80%);animation:yomi-drift 38s linear infinite;pointer-events:none}
+@keyframes yomi-drift{to{transform:translate(48px,48px)}}
+.awake .voice-grid{animation-play-state:paused}
+.voice-cell{position:absolute;top:0;left:0;width:47px;height:47px;transform:translate(-50px,-50px);background:#e887a819;pointer-events:none}
+.voice-home header{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;padding:22px 4vw;color:#ccc;font-size:13px}
+.voice-home nav{display:flex;gap:8px}
+.voice-home button,.voice-return{font:inherit;color:inherit;background:#151518;border:1px solid #ffffff24;border-radius:9px;padding:9px 14px;cursor:pointer}
+.voice-return{align-self:flex-start;margin-bottom:10px}
+.voice-center{position:absolute;inset:15% 0 14%;display:grid;place-items:center;pointer-events:none;transition:transform .45s}
+.with-panel .voice-center{transform:translateX(-13vw)}
+.voice-stage{position:relative;width:min(580px,85vw);aspect-ratio:2/1;display:grid;place-items:center}
+.voice-stage img,.voice-stage canvas{position:absolute;width:100%;transition:opacity .65s,transform .75s}
+.voice-stage img{width:60%;mix-blend-mode:screen}
+.voice-stage canvas{opacity:0;transform:scale(.72)}
+.awake .voice-stage canvas{opacity:1;transform:none}
+.awake .voice-stage img{opacity:0;transform:scale(.85)}
+.voice-caption{position:absolute;top:100%;width:100%;text-align:center;font-size:clamp(16px,2vw,23px);color:#e3dbe0}
+.voice-caption span{display:inline-block;animation:yomi-caption .25s}
+@keyframes yomi-caption{from{opacity:0}to{opacity:1}}
+.voice-home footer{position:absolute;bottom:5%;width:100%;text-align:center}
+.voice-tracker:not([hidden]){position:fixed;right:3%;top:38%;z-index:50;max-width:94vw;animation:yomi-summon .42s ease}
+.voice-tracker>div{max-width:100%;overflow-y:auto}
+@keyframes yomi-summon{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+@media(max-width:700px){.with-panel .voice-center{transform:translateY(-15vh)}.voice-tracker:not([hidden]){top:auto;bottom:14%;max-height:36dvh;overflow:auto}}
+@media(prefers-reduced-motion:reduce){.voice-home *,.voice-tracker{animation-duration:.001ms!important;animation-iteration-count:1!important;transition:none!important}}
