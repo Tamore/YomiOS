@@ -64,7 +64,7 @@ JAPANESE_CURRICULUM = {
             "meaning": "Distributed Systems",
             "category": "tech_cs",
             "level": "Technical",
-            "usage_tip": "Core specialty of Prof. Fukuda, Prof. Tei, and Prof. Défago."
+            "usage_tip": "Used when discussing distributed computing."
         },
         {
             "id": "tech_2",

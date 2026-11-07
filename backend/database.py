@@ -1,14 +1,19 @@
 import sqlite3
 import json
 import os
+import uuid
+import time
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "yomi.db")
+from config import WORKSPACE_ROOT
+
+DB_PATH = WORKSPACE_ROOT / "tasks.db"
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON;")
     return conn
 
 def init_db():
@@ -100,53 +105,7 @@ def init_db():
     
     conn.commit()
     
-    # Seed default starter data if empty
-    cursor.execute("SELECT COUNT(*) as count FROM domains")
-    if cursor.fetchone()["count"] == 0:
-        seed_starter_data(cursor)
-        conn.commit()
-
-    cursor.execute("SELECT COUNT(*) as count FROM subagents")
-    if cursor.fetchone()["count"] == 0:
-        starter_subagents = [
-            ("agent_arxiv_sentinel", "ArXiv Literature Sentinel", "Academic Researcher", "Monitor and synthesize distributed systems preprints from ArXiv and Semantic Scholar", json.dumps(["academic_researcher"]), "interval:6h", "IDLE", None, "Ready for literature review queries."),
-            ("agent_health_auditor", "Hardware Telemetry Auditor", "System Observability", "Inspect CPU, RAM, and thermals for resource leaks", json.dumps(["os_control"]), "interval:30m", "IDLE", None, "System operating within nominal parameters."),
-            ("agent_admissions_radar", "Japan Admissions Radar", "Academic Chief of Staff", "Track deadlines and requirements for Science Tokyo, SIT, and Waseda IPS", json.dumps(["web_summarizer", "academic_researcher"]), "manual", "IDLE", None, "All admissions trackers synchronized.")
-        ]
-        cursor.executemany("INSERT INTO subagents (id, name, role, prompt_template, tools_bound, schedule, status, last_run, last_output) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", starter_subagents)
-        conn.commit()
-        
     conn.close()
-
-def seed_starter_data(cursor):
-    domains = [
-        ("dom_japan", "Japan Admissions", "compass", "#ffffff", "Master's & Ph.D. Applications (NAIST, SIT, Kyoto, Waseda, OIST)"),
-        ("dom_research", "Research & Labs", "cpu", "#d0d5dd", "Distributed Systems, Autonomous Multi-Agent Consensus & Fault Tolerance"),
-        ("dom_engineering", "Prototypes & Build", "layers", "#98a2b3", "SkillMesh, Yomi 2.0 Chromium Engine, Vocaloid Audio Systems"),
-        ("dom_personal", "Creative & Daily", "sparkles", "#667085", "Language practice, Reading, Digital sketching & Daily life")
-    ]
-    cursor.executemany("INSERT INTO domains (id, name, icon, color, description) VALUES (?, ?, ?, ?, ?)", domains)
-    
-    projects = [
-        ("proj_naist", "dom_japan", "NAIST Master's Screening", "Active", 75, "2026-11-05"),
-        ("proj_sit", "dom_japan", "SIT TAO Pre-Consultation", "Under Review", 85, "2026-10-30"),
-        ("proj_kyoto", "dom_japan", "Kyoto AAO Research Student", "Approved", 90, "2026-11-15"),
-        ("proj_yomi", "dom_engineering", "Yomi 2.0 Backlit Executive HUD", "In Development", 60, "2026-11-01")
-    ]
-    cursor.executemany("INSERT INTO projects (id, domain_id, title, status, progress, target_date) VALUES (?, ?, ?, ?, ?, ?)", projects)
-    
-    tasks = [
-        ("task_1", "dom_japan", "proj_sit", "Check TAO Step 4 for Prof. Fukuda evaluation (or pivot to Prof. Sugaya)", "P1", "Pending", 0, "2026-10-26"),
-        ("task_2", "dom_japan", "proj_naist", "Confirm Examination Ticket dispatch on NAIST Portal", "P2", "Pending", 0, "2026-10-28"),
-        ("task_3", "dom_engineering", "proj_yomi", "Implement Backlit Chromium Monochromatic HUD & Web Summarizer", "P1", "In Progress", 0, "2026-10-25"),
-        ("task_4", "dom_research", None, "Review Prof. Xavier Defago Dependable Distributed Systems preprint", "P3", "Pending", 0, "2026-10-29")
-    ]
-    cursor.executemany("INSERT INTO tasks (id, domain_id, project_id, title, priority, status, is_completed, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", tasks)
-    
-    cursor.execute("""
-    INSERT INTO activity_logs (id, title, description, category, icon)
-    VALUES ('act_init', 'System Initialized', 'Yomi 2.0 Backlit Executive HUD online with 4 Life Domains.', 'SYSTEM', 'zap')
-    """)
 
 # CRUD Helpers
 def get_all_domains() -> List[Dict[str, Any]]:
@@ -179,7 +138,7 @@ def get_activity_logs(limit: int = 20) -> List[Dict[str, Any]]:
 
 def add_log(title: str, description: str, category: str = "EXECUTION", icon: str = "activity"):
     conn = get_connection()
-    log_id = f"act_{int(datetime.now().timestamp() * 1000)}"
+    log_id = f"act_{int(time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
     conn.execute("INSERT INTO activity_logs (id, title, description, category, icon) VALUES (?, ?, ?, ?, ?)",
                  (log_id, title, description, category, icon))
     conn.commit()
@@ -187,7 +146,7 @@ def add_log(title: str, description: str, category: str = "EXECUTION", icon: str
 
 def create_domain(name: str, icon: str = "folder", color: str = "#ffffff", description: str = "") -> Dict[str, Any]:
     conn = get_connection()
-    dom_id = f"dom_{int(datetime.now().timestamp() * 1000)}"
+    dom_id = f"dom_{int(time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
     conn.execute("INSERT INTO domains (id, name, icon, color, description) VALUES (?, ?, ?, ?, ?)",
                  (dom_id, name, icon, color, description))
     conn.commit()
@@ -197,7 +156,11 @@ def create_domain(name: str, icon: str = "folder", color: str = "#ffffff", descr
 
 def create_project(domain_id: str, title: str, target_date: Optional[str] = None) -> Dict[str, Any]:
     conn = get_connection()
-    proj_id = f"proj_{int(datetime.now().timestamp() * 1000)}"
+    dom = conn.execute("SELECT id FROM domains WHERE id = ?", (domain_id,)).fetchone()
+    if not dom:
+        conn.close()
+        raise ValueError(f"Domain '{domain_id}' does not exist.")
+    proj_id = f"proj_{int(time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
     conn.execute("INSERT INTO projects (id, domain_id, title, status, progress, target_date) VALUES (?, ?, ?, 'Active', 0, ?)",
                  (proj_id, domain_id, title, target_date))
     conn.commit()
@@ -207,7 +170,17 @@ def create_project(domain_id: str, title: str, target_date: Optional[str] = None
 
 def create_task(title: str, domain_id: Optional[str] = None, project_id: Optional[str] = None, priority: str = "P2", due_date: Optional[str] = None) -> Dict[str, Any]:
     conn = get_connection()
-    task_id = f"task_{int(datetime.now().timestamp() * 1000)}"
+    if domain_id:
+        dom = conn.execute("SELECT id FROM domains WHERE id = ?", (domain_id,)).fetchone()
+        if not dom:
+            conn.close()
+            raise ValueError(f"Domain '{domain_id}' does not exist.")
+    if project_id:
+        proj = conn.execute("SELECT id FROM projects WHERE id = ?", (project_id,)).fetchone()
+        if not proj:
+            conn.close()
+            raise ValueError(f"Project '{project_id}' does not exist.")
+    task_id = f"task_{int(time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
     conn.execute("INSERT INTO tasks (id, domain_id, project_id, title, priority, status, is_completed, due_date) VALUES (?, ?, ?, ?, ?, 'Pending', 0, ?)",
                  (task_id, domain_id, project_id, title, priority, due_date))
     conn.commit()
@@ -242,7 +215,7 @@ def update_project_progress(project_id: str, progress: int):
 
 def create_subagent(name: str, role: str, prompt_template: str, tools_bound: List[str], schedule: str = "manual") -> Dict[str, Any]:
     conn = get_connection()
-    agent_id = f"agent_{int(datetime.now().timestamp() * 1000)}"
+    agent_id = f"agent_{int(time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
     tools_json = json.dumps(tools_bound)
     conn.execute("""
         INSERT INTO subagents (id, name, role, prompt_template, tools_bound, schedule, status, last_run, last_output)

@@ -3,19 +3,48 @@ __pycache__/
 *.py[cod]
 *$py.class
 venv/
+.venv/
 .env
-cache/
-exports/*.pdf
+.env.local
+
+# Databases & SQLite sidecars
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 
-# Node
+# Generated Artifacts & Exports
+cache/
+cache/audio/
+exports/*.pdf
+exports/*.md
+exports/Research_Notes/
+Google_Drive_Sync/
+
+# Test output artifacts
+tests/*.png
+tests/*.pdf
+
+# Credentials & OAuth Tokens
+token.json
+credentials.json
+backend/config/token.json
+backend/config/credentials.json
+
+# Node & Build Outputs
 node_modules/
 dist/
 .next/
 .vscode/
+.idea/
 .DS_Store
+Thumbs.db
 
 # Logs
 *.log
 
+# Local personal records
+MASTER_CONSOLIDATED_RESEARCH_AND_ADMISSIONS_DOSSIER.md
+admissions-dossier.md
+admissions.json
+exports/

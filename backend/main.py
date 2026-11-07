@@ -35,19 +35,21 @@ from tools.web_summarizer import summarize_and_export_pdf
 from tools.japanese_tutor import get_all_flashcards, get_random_card, generate_quiz_question
 from tools.google_workspace import google_workspace
 from mcp_connector import mcp_connector
+from config import ALLOWED_ORIGINS, ENABLE_DEV_CODE_RUNNER, validate_workspace_path, validate_safe_url
 
 app = FastAPI(title="Yomi 2.0 Backlit Executive Engine", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "DELETE", "PUT", "OPTIONS"],
     allow_headers=["*"],
 )
 
-EXPORTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "exports"))
-AUDIO_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "cache", "audio"))
+from config import EXPORTS_DIR
+from config import WORKSPACE_ROOT
+AUDIO_DIR = WORKSPACE_ROOT / "cache" / "audio"
 os.makedirs(EXPORTS_DIR, exist_ok=True)
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
@@ -151,6 +153,7 @@ class SubagentRunPayload(BaseModel):
 # Core Status & State
 # -------------------------------------------------------------
 @app.get("/health")
+@app.get("/api/health")
 def health():
     return {"status": "online", "system": "Yomi 2.0 Backlit Engine"}
 
@@ -169,6 +172,10 @@ async def chat_endpoint(payload: ChatPayload):
     result = await brain.process_intent(payload.message, session_id=payload.session_id or "default")
     await broadcast_state()
     return result
+
+@app.get("/api/chat/history")
+def get_chat_history(session_id: str = "default", limit: int = 50):
+    return {"messages": memory.get_session_chat_history(session_id, limit)}
 
 @app.post("/api/tts")
 async def tts_endpoint(payload: ChatPayload):
@@ -239,6 +246,8 @@ async def web_search_endpoint(payload: WebSearchPayload):
 
 @app.post("/api/web/summarize")
 async def web_summarize_endpoint(payload: WebSummarizePayload):
+    if not validate_safe_url(payload.url):
+        raise HTTPException(status_code=400, detail="Invalid or restricted URL target.")
     res = await summarize_and_export_pdf(payload.url)
     await broadcast_state()
     return res
@@ -248,11 +257,20 @@ async def web_summarize_endpoint(payload: WebSummarizePayload):
 # -------------------------------------------------------------
 @app.post("/api/sandbox/execute")
 def execute_sandbox_endpoint(payload: CodeSandboxPayload):
+    if not ENABLE_DEV_CODE_RUNNER:
+        raise HTTPException(
+            status_code=403, 
+            detail="Execution disabled by default for security. Set YOMI_ENABLE_DEV_RUNNER=true in .env to enable developer execution runner."
+        )
     return execute_python_code(payload.code, timeout_seconds=payload.timeout_seconds or 6.0)
 
 @app.post("/api/paper/inspect")
 def inspect_paper_endpoint(payload: PaperInspectPayload):
-    return document_reader.inspect_pdf(payload.file_path, max_pages=payload.max_pages or 20)
+    try:
+        safe_path = str(validate_workspace_path(payload.file_path))
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    return document_reader.inspect_pdf(safe_path, max_pages=payload.max_pages or 20)
 
 # -------------------------------------------------------------
 # Tool Endpoints: Workspace & Memory
@@ -269,7 +287,10 @@ def save_note_endpoint(payload: NotePayload):
 
 @app.get("/api/workspace/proposal-stats")
 def proposal_stats_endpoint(path: Optional[str] = None):
-    target = path or r"d:\Japan Prep Temp\Nirmiti_Masters\RESEARCH_PROPOSAL_MASTER_DRAFT.md"
+    try:
+        target = str(validate_workspace_path(path)) if path else str(validate_workspace_path("proposal.md"))
+    except PermissionError as pe:
+        raise HTTPException(status_code=403, detail=str(pe))
     return analyze_proposal_stats(target)
 
 @app.get("/api/memory/all")
@@ -393,17 +414,31 @@ async def delete_subagent_endpoint(agent_id: str):
 # -------------------------------------------------------------
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    origin = websocket.headers.get("origin")
+    if origin and origin not in ALLOWED_ORIGINS:
+        await websocket.close(code=1008)
+        return
     await websocket.accept()
     active_connections.append(websocket)
     await websocket.send_text(json.dumps({"type": "INITIAL_STATE", "payload": get_full_state()}))
     try:
         while True:
             data = await websocket.receive_text()
-            msg = json.loads(data)
+            try:
+                msg = json.loads(data)
+            except json.JSONDecodeError:
+                continue
             if msg.get("type") == "CHAT_MESSAGE":
                 reply_data = await brain.process_intent(msg.get("text", ""), session_id=msg.get("session_id", "default"))
                 await websocket.send_text(json.dumps({"type": "CHAT_REPLY", "payload": reply_data}))
                 await broadcast_state()
-    except WebSocketDisconnect:
+    except Exception:
+        pass
+    finally:
         if websocket in active_connections:
             active_connections.remove(websocket)
+
+if __name__ == "__main__":
+    import uvicorn
+    from config import YOMI_HOST, YOMI_PORT
+    uvicorn.run("main:app", host=YOMI_HOST, port=YOMI_PORT, reload=True)
