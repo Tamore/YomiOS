@@ -8,7 +8,7 @@
 .with-panel .voice-center{transform:translateX(-13vw)}
 .voice-stage{position:relative;width:min(580px,85vw);aspect-ratio:2/1;display:grid;place-items:center}
 .voice-stage img,.voice-stage canvas{position:absolute;width:100%;transition:opacity .65s,transform .75s}
-.voice-stage img{width:60%;mix-blend-mode:screen}
+.voice-stage img{width:60%}
 .voice-stage canvas{opacity:0;transform:scale(.72)}
 .awake .voice-stage canvas{opacity:1;transform:none}
 .awake .voice-stage img{opacity:0;transform:scale(.85)}
@@ -17,7 +17,16 @@
 @keyframes yomi-caption{from{opacity:0}to{opacity:1}}
 .voice-home footer{position:absolute;bottom:5%;width:100%;text-align:center}
 .voice-tracker:not([hidden]){position:fixed;right:3%;top:38%;z-index:50;max-width:94vw;animation:yomi-summon .42s ease}
-.voice-tracker>div{max-width:100%;overflow-y:auto}
+.voice-tracker { --tracker-height: calc(62dvh - 16px); }
+.voice-tracker > .bklit-frame {
+  box-sizing: border-box;
+  max-width: 100%;
+  max-height: min(500px, var(--tracker-height));
+  overflow: hidden;
+}
+.voice-tracker .bklit-frame-panel { display: flex; flex-direction: column; min-height: 0; }
+.voice-tracker .bklit-frame-panel > :not(.card-scroll) { flex-shrink: 0; }
+.voice-tracker .card-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 @keyframes yomi-summon{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
-@media(max-width:700px){.with-panel .voice-center{transform:translateY(-15vh)}.voice-tracker:not([hidden]){top:auto;bottom:14%;max-height:36dvh;overflow:auto}}
+@media(max-width:700px){.with-panel .voice-center{transform:translateY(-15vh)}.voice-tracker:not([hidden]){top:auto;bottom:14%;--tracker-height:36dvh}}
 @media(prefers-reduced-motion:reduce){.voice-home *,.voice-tracker{animation-duration:.001ms!important;animation-iteration-count:1!important;transition:none!important}}

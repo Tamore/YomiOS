@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Activity, GraduationCap, Languages, Layers, 
   Send, Volume2, ExternalLink,
-  ChevronDown, ChevronUp, CheckSquare, Square,
+  ChevronDown, ChevronLeft, CheckSquare, Square,
   RefreshCw, Search, Download, AlertCircle, Loader2
 } from 'lucide-react';
 import { 
@@ -308,52 +308,13 @@ export default function App() {
       {/* 1. TOP CHROME & NAVIGATION (Bklit Container & Frame)          */}
       {/* ------------------------------------------------------------- */}
       {home ? <VoiceHome panel={isWindowOpen} setPanel={setIsWindowOpen} openDashboard={() => setHome(false)} /> : <>
-      <button className="voice-return" onClick={() => setHome(true)}>← Yomi home</button>
-      <div className="bklit-container mb-8">
-        <header className="bklit-frame">
-          <div className="bklit-frame-panel py-3 px-5 flex flex-wrap items-center justify-between gap-4">
-            
-            {/* Custom Yomi Brandmark (Option 3: Cyber-Kamon Diamond) */}
-            <div className="flex items-center gap-3">
-              <svg 
-                className="w-5 h-5 shrink-0" 
-                viewBox="0 0 32 32" 
-                fill="none" 
-                xmlns="http://www.w3.org/2000/svg"
-                aria-label="Yomi Brandmark"
-              >
-                <defs>
-                  <linearGradient id="yomi-kamon-rose" x1="16" y1="12" x2="16" y2="28" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#ffffff" />
-                    <stop offset="40%" stopColor="#fb7185" />
-                    <stop offset="100%" stopColor="#e11d48" />
-                  </linearGradient>
-                  <linearGradient id="yomi-kamon-white" x1="7" y1="4" x2="16" y2="13" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#ffffff" />
-                    <stop offset="100%" stopColor="#e4e4e7" />
-                  </linearGradient>
-                </defs>
-
-                {/* Top Left Diamond Facet */}
-                <polygon points="16,4 7,13 13,13 16,10" fill="url(#yomi-kamon-white)" />
-                {/* Top Right Diamond Facet */}
-                <polygon points="16,4 25,13 19,13 16,10" fill="#ffffff" fillOpacity="0.45" />
-                {/* Lower Keel Diamond */}
-                <polygon points="16,13 21,18 16,28 11,18" fill="url(#yomi-kamon-rose)" />
-                {/* Core Architecture */}
-                <polygon points="16,7 13.5,11.5 18.5,11.5" fill="#0e0e11" />
-              </svg>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-sm tracking-tight text-white">Yomi</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-zinc-400">
-                  v2.0 · Bklit Engine
-                </span>
-              </div>
-            </div>
-
-            {/* Segmented Hubs */}
-            <nav className="flex items-center p-1 rounded-xl bg-black/40 border border-white/[0.06] text-xs font-medium gap-1">
+      <header className="dashboard-header">
+        <button className="dashboard-home" aria-label="Return to Yomi home" title="Yomi home" onClick={() => setHome(true)}>
+          <img src={import.meta.env.BASE_URL + 'yomi-symbol.svg'} alt="" width="64" height="64" />
+        </button>
+        <nav className="dashboard-nav" aria-label="Dashboard sections">
               <button 
+                aria-pressed={activeTab === 'hud'}
                 onClick={() => setActiveTab('hud')}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
                   activeTab === 'hud' ? 'bg-white/[0.1] text-white shadow-sm' : 'text-zinc-400 hover:text-white'
@@ -363,6 +324,7 @@ export default function App() {
                 <span>Intelligence HUD</span>
               </button>
               <button 
+                aria-pressed={activeTab === 'academics'}
                 onClick={() => setActiveTab('academics')}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
                   activeTab === 'academics' ? 'bg-white/[0.1] text-white shadow-sm' : 'text-zinc-400 hover:text-white'
@@ -372,6 +334,7 @@ export default function App() {
                 <span>Academics & Dossier</span>
               </button>
               <button 
+                aria-pressed={activeTab === 'dojo'}
                 onClick={() => setActiveTab('dojo')}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
                   activeTab === 'dojo' ? 'bg-white/[0.1] text-white shadow-sm' : 'text-zinc-400 hover:text-white'
@@ -381,6 +344,7 @@ export default function App() {
                 <span>Nihongo Dojo</span>
               </button>
               <button 
+                aria-pressed={activeTab === 'mcp'}
                 onClick={() => setActiveTab('mcp')}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
                   activeTab === 'mcp' ? 'bg-white/[0.1] text-white shadow-sm' : 'text-zinc-400 hover:text-white'
@@ -391,21 +355,7 @@ export default function App() {
               </button>
             </nav>
 
-            {/* Right Health Quick Status */}
-            <div className="flex items-center gap-2.5">
-              <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white/[0.02] border border-white/[0.06] text-xs font-mono">
-                <span className={`w-1.5 h-1.5 rounded-full ${citexHealth.online ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
-                <span className="text-zinc-400">CiteX</span>
-              </div>
-              <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white/[0.02] border border-white/[0.06] text-xs font-mono">
-                <span className={`w-1.5 h-1.5 rounded-full ${googleHealth.connected ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                <span className="text-zinc-400">Google</span>
-              </div>
-            </div>
-
-          </div>
-        </header>
-      </div>
+      </header>
 
       {/* Full-bleed Hairline Divider with Rivets */}
       <div className="bklit-container">
@@ -415,7 +365,15 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* 2. MAIN ACTIVE VIEWS                                          */}
       {/* ------------------------------------------------------------- */}
-      <main className="bklit-container space-y-8 pb-20">
+      <main className="bklit-container dashboard-motion space-y-8 pb-20"
+        onPointerMove={event => {
+          if (event.pointerType === 'touch' || !(event.target instanceof Element)) return;
+          const card = event.target.closest<HTMLElement>('.bklit-frame');
+          if (!card) return;
+          const bounds = card.getBoundingClientRect();
+          card.style.setProperty('--glow-x', (event.clientX - bounds.left) + 'px');
+          card.style.setProperty('--glow-y', (event.clientY - bounds.top) + 'px');
+        }}>
 
         {/* Global Error Notice if task connection failed */}
         {tasksError && (
@@ -437,10 +395,10 @@ export default function App() {
         {/* VIEW 1: INTELLIGENCE HUD                                      */}
         {/* ------------------------------------------------------------- */}
         {activeTab === 'hud' && (
-          <div className="space-y-8">
+          <div className="yomi-tiles tiles-hud">
             
             {/* Activity & Habit Heatmap Frame */}
-            <section className="bklit-frame">
+            <section id="activity-calendar" className="bklit-frame">
               <div className="bklit-frame-panel space-y-6">
                 
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -561,11 +519,8 @@ export default function App() {
             </section>
 
             {/* 3 Metric Summary Cards */}
-            <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              
-              {/* Card 1: Wave Curve */}
-              <div className="bklit-frame">
-                <div className="bklit-frame-panel flex flex-col justify-between h-full space-y-4">
+            <section className="bklit-frame metric-tile">
+<div className="bklit-frame-panel flex flex-col justify-between h-full space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Research Velocity</span>
                     <span className="text-xs font-mono font-medium text-zinc-400">Not measured</span>
@@ -581,11 +536,9 @@ export default function App() {
                     <span className="font-mono text-zinc-400 font-medium">Not tracked</span>
                   </div>
                 </div>
-              </div>
-
-              {/* Card 2: Ring Metric */}
-              <div className="bklit-frame">
-                <div className="bklit-frame-panel flex flex-col justify-between h-full space-y-4">
+            </section>
+            <section className="bklit-frame metric-tile">
+<div className="bklit-frame-panel flex flex-col justify-between h-full space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Dossier Completion</span>
                     <span className="text-xs font-mono text-zinc-400">Not verified</span>
@@ -607,11 +560,9 @@ export default function App() {
                     <span className="font-mono text-zinc-400 font-medium">Not verified</span>
                   </div>
                 </div>
-              </div>
-
-              {/* Card 3: JLPT Language Progress */}
-              <div className="bklit-frame">
-                <div className="bklit-frame-panel flex flex-col justify-between h-full space-y-4">
+            </section>
+            <section className="bklit-frame metric-tile">
+<div className="bklit-frame-panel flex flex-col justify-between h-full space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">JLPT N4 Horizon</span>
                     <span className="text-xs font-mono text-zinc-400">Schedule Unset</span>
@@ -637,8 +588,6 @@ export default function App() {
                     <span className="font-mono text-zinc-400 font-medium">Unset</span>
                   </div>
                 </div>
-              </div>
-
             </section>
 
             {/* Conversational Chief of Staff Dialogue Frame */}
@@ -646,18 +595,12 @@ export default function App() {
               <div className="bklit-frame-panel space-y-6">
                 
                 <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
-                  <div>
-                    <h2 className="text-lg font-semibold tracking-tight text-white">Chief of Staff Dialogue</h2>
-                    <p className="text-xs text-zinc-400">Contextual integration across CiteX, Google Workspace, and research pipelines.</p>
-                  </div>
-                  <span className="text-xs font-mono text-zinc-400 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.06]">
-                    Ollama Qwen2.5 · Bounded Neural Memory
-                  </span>
+                  <h2 className="text-lg font-semibold">Chat with Yomi</h2>
                 </div>
 
                 <div ref={chatScrollContainerRef} className="space-y-4 max-h-[380px] overflow-y-auto pr-2 card-scroll">
                   {messages.map(msg => (
-                    <div key={msg.id} className="flex items-start gap-4">
+                    <div key={msg.id} className={`chat-row flex items-start gap-2 ${msg.sender === "user" ? "flex-row-reverse" : ""}`}>
                       <div className={`w-7 h-7 rounded-lg border flex items-center justify-center text-xs font-mono font-medium shrink-0 ${
                         msg.isError 
                           ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' 
@@ -674,15 +617,6 @@ export default function App() {
                       }`}>
                         <p className={msg.isError ? "text-rose-200" : "text-zinc-200 whitespace-pre-wrap"}>{msg.text}</p>
                         
-                        {/* Tool execution badge & link if present */}
-                        {msg.toolUsed && (
-                          <div className="flex items-center gap-2 pt-1">
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.08] text-zinc-400">
-                              Tool: {msg.toolUsed}
-                            </span>
-                          </div>
-                        )}
-
                         {/* Direct Download Action Link */}
                         {msg.downloadUrl && (
                           <div className="pt-1">
@@ -726,7 +660,7 @@ export default function App() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    placeholder="Direct query to Yomi or launch research workflow (paper on edge AI, add task: review draft)..." 
+                    placeholder="Message Yomi…" 
                     className="flex-1 bg-transparent px-3 py-2 text-xs md:text-sm text-white placeholder-zinc-500 focus:outline-none"
                   />
                   <button 
@@ -749,7 +683,7 @@ export default function App() {
         {/* VIEW 2: ACADEMICS & DOSSIER                                   */}
         {/* ------------------------------------------------------------- */}
         {activeTab === 'academics' && (
-          <div className="space-y-8">
+          <div className="yomi-tiles tiles-academics">
             <div className="border-b border-white/[0.06] pb-5">
               <h1 className="text-2xl font-bold tracking-tight text-white">Academics & Dossier</h1>
               <p className="text-xs md:text-sm text-zinc-400 mt-1">
@@ -906,7 +840,7 @@ export default function App() {
         {/* VIEW 3: NIHONGO DOJO                                          */}
         {/* ------------------------------------------------------------- */}
         {activeTab === 'dojo' && (
-          <div className="space-y-8">
+          <div className="yomi-tiles tiles-dojo">
             <div className="border-b border-white/[0.06] pb-5">
               <h1 className="text-2xl font-bold tracking-tight text-white">Nihongo Dojo</h1>
               <p className="text-xs md:text-sm text-zinc-400 mt-1">
@@ -914,9 +848,9 @@ export default function App() {
               </p>
             </div>
 
-            <section className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+            <section className="dojo-tiles">
               {/* Left: 3D Flip Card */}
-              <div className="md:col-span-7 space-y-4">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono text-zinc-400">
                     {cardsLoading ? "Loading flashcard deck..." : `Card ${cardIdx + 1} of ${cards.length || 1} · ${currentCard.category}`}
@@ -1013,7 +947,7 @@ export default function App() {
               </div>
 
               {/* Right: Rapid Drill Practice */}
-              <div className="md:col-span-5 space-y-4">
+              <div className="space-y-4">
                 <div className="bklit-frame">
                   <div className="bklit-frame-panel space-y-4">
                     <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
@@ -1077,7 +1011,7 @@ export default function App() {
         {/* VIEW 4: MCP & CONNECTIONS                                     */}
         {/* ------------------------------------------------------------- */}
         {activeTab === 'mcp' && (
-          <div className="space-y-8">
+          <div className="yomi-tiles tiles-mcp">
             <div className="border-b border-white/[0.06] pb-5 flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-white">MCP & Connected Services</h1>
@@ -1095,7 +1029,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="service-tiles">
               {/* Connection 1: CiteX */}
               <div className="bklit-frame">
                 <div className="bklit-frame-panel flex flex-wrap items-center justify-between gap-4">
@@ -1198,20 +1132,12 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* 3. MINIMIZABLE / MAXIMIZABLE DOCKED CONTROLLER                */}
       {/* ------------------------------------------------------------- */}
-      <div hidden={home && !isWindowOpen} className={home ? "voice-tracker" : "fixed bottom-5 right-5 z-50"}>
+      <div hidden={home && !isWindowOpen} className={home ? "voice-tracker" : "dashboard-drawer"}>
         {!isWindowOpen ? (
-          <div 
-            onClick={() => setIsWindowOpen(true)}
-            className="cursor-pointer group flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-[#0e0e11]/95 hover:bg-[#16161a] border border-white/[0.14] hover:border-white/[0.28] shadow-2xl backdrop-blur-md transition-all"
-            title="Open Pipeline & Action Tracker"
-          >
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--chart-1)' }} />
-            <span className="text-xs font-medium tracking-tight text-white group-hover:text-zinc-200">Pipelines & Tasks</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-white/[0.06] text-zinc-300">
-              {tasks.filter(t => !t.is_completed).length} Pending
-            </span>
-            <ChevronUp className="w-3.5 h-3.5 text-zinc-400 group-hover:text-white transition-colors" />
-          </div>
+          <button type="button" className="drawer-handle" onClick={() => setIsWindowOpen(true)}
+              aria-label="Open pipeline and actions" title="Open pipeline and actions">
+              <ChevronLeft size={15} aria-hidden="true" />
+            </button>
         ) : (
           <div className="w-80 md:w-[380px] max-h-[500px] bklit-frame shadow-2xl backdrop-blur-2xl transition-all">
             <div className="bklit-frame-panel p-0 overflow-hidden flex flex-col">

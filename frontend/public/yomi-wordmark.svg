@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 76">
+  <title>Yomi</title>
+  <defs>
+    <linearGradient id="alloy" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff6ef"/><stop offset=".55" stop-color="#e8dce3"/><stop offset="1" stop-color="#e8abc6"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#alloy)" transform="translate(10 0) skewX(-8)">
+    <path d="M0 9h20l20 23L60 9h20L48 46v19H32V46Z"/>
+    <path fill-rule="evenodd" d="M94 9h44l11 11v34l-12 11H92L81 54V21Zm6 14-4 4v20l5 4h29l4-4V27l-5-4Z"/>
+    <path d="M161 65V9h15l23 27 23-27h15v56h-16V34l-22 25-22-25v31Z"/>
+    <path d="M250 26h17v39h-17Z"/>
+    <path fill="#ffc4d8" d="M250 9h32l-9 10h-23Z"/>
+  </g>
+</svg>

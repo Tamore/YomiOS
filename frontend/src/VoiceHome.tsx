@@ -83,7 +83,7 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
 >
     <TrailGrid />
     <header><img src={import.meta.env.BASE_URL + 'yomi-symbol.svg'} alt="Yomi" width="32" height="32" /><nav><button onClick={openDashboard}>Dashboard</button><button aria-expanded={panel} onClick={() => { manuallyToggled.current = true; setPanel(!panel); }}>{panel ? 'Hide pipeline' : 'Show pipeline'}</button></nav></header>
-    <div className="voice-center"><div className="voice-stage"><img src={import.meta.env.BASE_URL+'yomi-b1.webp'} alt="Yomi" /><Orb phase={phase}/><div className="voice-caption" aria-live="polite"><span key={caption}>{caption}</span></div></div></div>
+    <div className="voice-center"><div className="voice-stage"><img src={import.meta.env.BASE_URL+'yomi-wordmark.svg'} alt="Yomi" /><Orb phase={phase}/><div className="voice-caption" aria-live="polite"><span key={caption}>{caption}</span></div></div></div>
     <footer><button onClick={play}>{phase === 'idle' ? 'Play “Hey Yomi” demo' : 'Return to wordmark'}</button></footer>
   </section>;
 }
