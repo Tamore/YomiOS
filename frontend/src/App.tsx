@@ -1,3 +1,4 @@
+import VoiceHome from './VoiceHome';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Activity, GraduationCap, Languages, Layers, 
@@ -35,6 +36,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'hud' | 'academics' | 'dojo' | 'mcp'>('hud');
 
   // Sticky Floating Window starts MINIMIZED by default so it never blocks the view
+  const [home, setHome] = useState(true);
   const [isWindowOpen, setIsWindowOpen] = useState(false);
   const [stickyTab, setStickyTab] = useState<'pipeline' | 'actions'>('pipeline');
 
@@ -244,6 +246,8 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* 1. TOP CHROME & NAVIGATION (Bklit Container & Frame)          */}
       {/* ------------------------------------------------------------- */}
+      {home ? <VoiceHome panel={isWindowOpen} setPanel={setIsWindowOpen} openDashboard={() => setHome(false)} /> : <>
+      <button className="voice-return" onClick={() => setHome(true)}>← Yomi home</button>
       <div className="bklit-container mb-8">
         <header className="bklit-frame">
           <div className="bklit-frame-panel py-3 px-5 flex flex-wrap items-center justify-between gap-4">
@@ -1066,11 +1070,12 @@ export default function App() {
         )}
 
       </main>
+      </>}
 
       {/* ------------------------------------------------------------- */}
       {/* 3. MINIMIZABLE / MAXIMIZABLE DOCKED CONTROLLER                */}
       {/* ------------------------------------------------------------- */}
-      <div className="fixed bottom-5 right-5 z-50">
+      <div hidden={home && !isWindowOpen} className={home ? "voice-tracker" : "fixed bottom-5 right-5 z-50"}>
         {!isWindowOpen ? (
           <div 
             onClick={() => setIsWindowOpen(true)}
