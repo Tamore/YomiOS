@@ -28,9 +28,10 @@ from tools.workspace_manager import list_workspace_files, save_research_note, an
 from tools.japanese_tutor import get_random_card, generate_quiz_question, get_all_flashcards
 from tools.google_workspace import google_workspace
 from mcp_connector import mcp_connector
+from config import validate_workspace_path, validate_safe_url
 
 SYSTEM_PROMPT = """You are Yomi, an elite, witty, and exceptionally sharp executive AI companion and research chief of staff.
-You assist Nirmiti with her Japan Master's applications, distributed systems research, engineering projects, and daily life.
+You assist the candidate with academic research workflows, distributed systems engineering, project execution, and daily focus.
 Tone: Natural, concise, brilliant, slightly playful/witty, zero robotic clichés (never say "How may I assist you today?").
 Keep conversational answers punchy (1-3 sentences maximum). Output clear facts, sharp insights, and proactive steps."""
 
@@ -113,9 +114,9 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
 
     gmail_match = re.search(r'(?:open in gmail|draft gmail|send via gmail)\s*(?:to\s+)?([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)?', lower)
     if gmail_match and not any(w in lower for w in ["academic email"]):
-        to_email = gmail_match.group(1) or "hiroaki@shibaura-it.ac.jp"
-        subj = "Inquiry regarding Master's Research (AY2027) — Nirmiti Ramesh Tamore"
-        body = "Dear Professor,\n\nI hope this email finds you well.\n\nBest regards,\nNirmiti Ramesh Tamore"
+        to_email = gmail_match.group(1) or ""
+        subj = "Inquiry regarding Master's Research (AY2027)"
+        body = "Dear Professor,\n\nI hope this email finds you well.\n\nBest regards,"
         res = await google_workspace.draft_or_compose_email(to=to_email, subject=subj, body=body)
         db.add_log("Google Workspace", f"Generated Gmail Compose link for {to_email}", "EMAIL", "mail")
         return {
@@ -125,12 +126,25 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
         }
 
     if "save to drive" in lower or "sync to drive" in lower or "upload to drive" in lower:
-        # Save latest brief or proposal
-        source_doc = r"d:\Japan Prep Temp\Nirmiti_Masters\Final_Formal_Research_Proposal.md"
-        stage_res = google_workspace.stage_file_to_drive(source_doc, "Master_Proposals")
-        db.add_log("Google Workspace", "Staged proposal to Google Drive Sync", "DRIVE", "hard-drive")
+        # Check for proposal or recent export file
+        source_doc = str(validate_workspace_path("proposal.md"))
+        stage_res = google_workspace.stage_file_to_drive(source_doc, "Research_Documents")
+        if not stage_res.get("success"):
+            reply = f"Drive staging could not locate source document: {stage_res.get('error')}"
+            memory.append_chat(session_id, "user", text)
+            memory.append_chat(session_id, "assistant", reply, tool_calls="google_drive_sync")
+            return {
+                "reply": reply,
+                "tool_used": "google_drive_sync",
+                "error": True,
+                "data": stage_res
+            }
+        db.add_log("Google Workspace", "Staged document to Google Drive Sync mirror", "DRIVE", "hard-drive")
+        reply = f"Staged **{stage_res.get('filename')}** to local Google Drive mirror (`Google_Drive_Sync/Research_Documents`)."
+        memory.append_chat(session_id, "user", text)
+        memory.append_chat(session_id, "assistant", reply, tool_calls="google_drive_sync")
         return {
-            "reply": f"Staged **{stage_res['filename']}** to your Google Drive Sync folder (`Google_Drive_Sync/Master_Proposals`).",
+            "reply": reply,
             "tool_used": "google_drive_sync",
             "data": stage_res
         }
@@ -219,19 +233,6 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
         prof_target = email_match.group(1).strip().title()
         uni_name = "Target University"
         topic = "Distributed Systems and Self-Adaptive Autonomous Architectures"
-        if "fukuda" in prof_target.lower():
-            prof_target = "Hiroaki Fukuda"
-            uni_name = "Shibaura Institute of Technology"
-        elif "fujimura" in prof_target.lower():
-            prof_target = "Shigeru Fujimura"
-            uni_name = "Waseda University (IPS)"
-        elif "tei" in prof_target.lower():
-            prof_target = "Kenji Tei"
-            uni_name = "Institute of Science Tokyo"
-        elif "inoue" in prof_target.lower():
-            prof_target = "Michiko Inoue"
-            uni_name = "NAIST"
-
         email_data = draft_academic_email(
             professor_name=prof_target,
             university_name=uni_name,
@@ -247,18 +248,7 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
     match_lab_match = re.search(r'(?:match|evaluate fit|lab fit)\s+(?:for\s+)?(?:lab\s+)?([a-zA-Z0-9_\-]+)', lower)
     if match_lab_match:
         target_name = match_lab_match.group(1).strip().lower()
-        lab_id = "sit"
-        if any(w in target_name for w in ["sit", "shibaura", "fukuda"]):
-            lab_id = "sit"
-        elif any(w in target_name for w in ["waseda", "ips", "fujimura"]):
-            lab_id = "waseda_ips"
-        elif any(w in target_name for w in ["naist", "inoue"]):
-            lab_id = "naist"
-        elif any(w in target_name for w in ["science_tokyo", "tokyo_tech", "tei", "defago"]):
-            lab_id = "science_tokyo"
-        elif any(w in target_name for w in ["ritsumeikan", "frex", "nakasuka"]):
-            lab_id = "ritsumeikan"
-        
+        lab_id = target_name
         keywords = ["Distributed Systems", "Self-Adaptive", "Decentralized Consensus", "Autonomous Agents", "Fault Tolerance"]
         fit_data = calculate_lab_match(keywords, lab_id)
         if "error" not in fit_data and fit_data.get("advisors_match"):
@@ -270,7 +260,7 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
             }
         else:
             return {
-                "reply": f"Could not find an exact lab profile for '{target_name}'. Available labs: SIT (Fukuda), Waseda IPS (Fujimura), NAIST (Inoue), Science Tokyo (Tei / Défago), Ritsumeikan (Nakasuka).",
+                "reply": f"Could not find an exact lab profile for '{target_name}'. Use a lab ID from your local admissions list.",
                 "tool_used": "lab_matcher"
             }
 
@@ -293,6 +283,37 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
             }
 
     # -------------------------------------------------------------
+    # 3b. TASK MANAGER COMMANDS
+    # e.g., "add task: Review distributed consensus paper", "new task [P1] Update API"
+    # -------------------------------------------------------------
+    task_match = re.search(r'^(?:add|create|new)\s+task[:\s]+(.+)', lower)
+    if task_match:
+        raw_task = task_match.group(1).strip()
+        pri = "P2"
+        if "[p1]" in raw_task.lower() or "priority 1" in raw_task.lower() or "priority: p1" in raw_task.lower():
+            pri = "P1"
+        elif "[p3]" in raw_task.lower() or "priority 3" in raw_task.lower() or "priority: p3" in raw_task.lower():
+            pri = "P3"
+        
+        clean_title = re.sub(r'\[p[123]\]', '', raw_task, flags=re.IGNORECASE).strip()
+        clean_title = re.sub(r'priority:?\s*p?[123]', '', clean_title, flags=re.IGNORECASE).strip()
+        if not clean_title:
+            clean_title = raw_task
+
+        new_t = db.create_task(title=clean_title, priority=pri)
+        reply = f"Added task to Yomi matrix: [{new_t['priority']}] **{new_t['title']}** (ID: `{new_t['id']}`)."
+        memory.append_chat(session_id, "user", text)
+        memory.append_chat(session_id, "assistant", reply, tool_calls="task_manager")
+        return {
+            "reply": reply,
+            "tool_used": "task_manager",
+            "data": {
+                "task": new_t,
+                "task_modified": True
+            }
+        }
+
+    # -------------------------------------------------------------
     # 4. CODE SANDBOX & FORMULA RUNNER
     # e.g., "run python: print(sum([1,2,3]))", "calculate 15 * 84"
     # -------------------------------------------------------------
@@ -300,30 +321,42 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
     if code_match:
         script = code_match.group(1).strip()
         res = execute_python_code(script)
-        out = res["stdout"].strip() if res["stdout"] else res["stderr"].strip()
+        if not res.get("success") and res.get("return_code") == 403:
+            reply = "Execution is disabled by default for security. Set YOMI_ENABLE_DEV_RUNNER=true in your .env file to enable the developer execution runner."
+        else:
+            out = res["stdout"].strip() if res["stdout"] else res["stderr"].strip()
+            reply = f"Runner executed in {res['execution_time_ms']}ms:\n```\n{out}\n```"
         db.add_log("Code Sandbox", f"Executed Python snippet ({res['execution_time_ms']}ms)", "CODE", "terminal")
+        memory.append_chat(session_id, "user", text)
+        memory.append_chat(session_id, "assistant", reply, tool_calls="code_sandbox")
         return {
-            "reply": f"Sandbox executed in {res['execution_time_ms']}ms:\n```\n{out}\n```",
+            "reply": reply,
             "tool_used": "code_sandbox",
             "data": res
         }
 
     # -------------------------------------------------------------
     # 5. LOCAL PDF & PAPER INGESTION
-    # e.g., "read pdf D:/path/to/paper.pdf", "search in pdf D:/guide.pdf for 'IELTS'"
+    # e.g., "read pdf D:/path/to/paper.pdf", "read pdf \"D:/path with spaces/paper.pdf\""
     # -------------------------------------------------------------
-    pdf_match = re.search(r'(?:read|inspect|parse)\s+pdf\s+([^\s]+)', text)
+    pdf_match = re.search(r'(?:read|inspect|parse)\s+pdf\s+(?:"([^"]+)"|\'([^\']+)\'|(\S+))', text)
     if pdf_match:
-        pdf_path = pdf_match.group(1).strip().strip('"').strip("'")
+        pdf_path = (pdf_match.group(1) or pdf_match.group(2) or pdf_match.group(3)).strip()
         pdf_data = document_reader.inspect_pdf(pdf_path)
         if pdf_data["success"]:
+            reply = f"Extracted **{pdf_data['filename']}** ({pdf_data['total_pages']} pages). Abstract preview:\n\n> {pdf_data['abstract'][:400]}..."
+            memory.append_chat(session_id, "user", text)
+            memory.append_chat(session_id, "assistant", reply, tool_calls="paper_reader")
             return {
-                "reply": f"Extracted **{pdf_data['filename']}** ({pdf_data['total_pages']} pages). Abstract preview:\n\n> {pdf_data['abstract'][:400]}...",
+                "reply": reply,
                 "tool_used": "paper_reader",
                 "data": pdf_data
             }
         else:
-            return {"reply": f"Could not inspect PDF: {pdf_data.get('error')}", "tool_used": "paper_reader", "error": pdf_data.get("error")}
+            reply = f"Could not inspect PDF: {pdf_data.get('error')}"
+            memory.append_chat(session_id, "user", text)
+            memory.append_chat(session_id, "assistant", reply, tool_calls="paper_reader")
+            return {"reply": reply, "tool_used": "paper_reader", "error": pdf_data.get("error")}
 
     # -------------------------------------------------------------
     # 6. WORKSPACE & PROPOSAL TOOLS
@@ -342,7 +375,7 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
         }
 
     if "proposal stats" in lower or "proposal length" in lower:
-        default_proposal = r"d:\Japan Prep Temp\Nirmiti_Masters\Final_Formal_Research_Proposal.md"
+        default_proposal = "proposal.md"
         stats = analyze_proposal_stats(default_proposal)
         if stats["success"]:
             return {
@@ -359,22 +392,41 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
     url_match = re.search(r'(https?://[^\s]+|[a-zA-Z0-9_\-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?)', text)
     if ("summarize" in lower or "take notes" in lower or "export pdf" in lower or "read" in lower) and url_match:
         target_url = url_match.group(1)
+        if not target_url.startswith("http://") and not target_url.startswith("https://"):
+            target_url = "https://" + target_url
+
+        if not validate_safe_url(target_url):
+            reply = f"Security restriction: '{target_url}' is not a permitted public web target (internal/private/loopback addresses are blocked)."
+            memory.append_chat(session_id, "user", text)
+            memory.append_chat(session_id, "assistant", reply, tool_calls="web_summarizer")
+            return {
+                "reply": reply,
+                "tool_used": "web_summarizer",
+                "is_error": True
+            }
+
         try:
             summary_res = await summarize_and_export_pdf(target_url)
             filename = summary_res["filename"]
             title = summary_res["title"]
             reply = f"Analyzed **{title}**! Extracted key takeaways and exported your formatted briefing to `{filename}`."
             db.add_log("Web Intelligence Briefing", f"Summarized {target_url} into {filename}", "INTELLIGENCE", "file-text")
+            memory.append_chat(session_id, "user", text)
+            memory.append_chat(session_id, "assistant", reply, tool_calls="web_summarizer")
             return {
                 "reply": reply,
                 "tool_used": "web_summarizer",
                 "data": summary_res
             }
         except Exception as e:
+            reply = f"Attempted to inspect `{target_url}`, but encountered network friction: {str(e)}"
+            memory.append_chat(session_id, "user", text)
+            memory.append_chat(session_id, "assistant", reply, tool_calls="web_summarizer")
             return {
-                "reply": f"Attempted to inspect `{target_url}`, but encountered network friction: {str(e)}",
+                "reply": reply,
                 "tool_used": "web_summarizer",
-                "error": str(e)
+                "error": str(e),
+                "is_error": True
             }
 
     # -------------------------------------------------------------
@@ -488,10 +540,15 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
         return {"reply": "I'm Yomi—your executive AI companion, research strategist, and mission control chief of staff.", "tool_used": None}
 
     # -------------------------------------------------------------
-    # 12. UNIFIED LLM REASONING (Ollama / Gemini / Groq with Memory Prompt)
+    # 12. UNIFIED LLM REASONING (Ollama / Gemini / Groq with Memory Prompt & Bounded History)
     # -------------------------------------------------------------
     context_facts = memory.build_context_prompt()
+    recent_chats = memory.get_recent_chat(session_id=session_id, limit=6)
+    history_text = "\n".join([f"{c['role'].capitalize()}: {c['content']}" for c in recent_chats])
+    
     combined_system_prompt = f"{SYSTEM_PROMPT}\n\n{context_facts}"
+    if history_text:
+        combined_system_prompt += f"\n\nRecent Conversation History:\n{history_text}"
     
     llm_res = await llm_client.generate_response(
         prompt=text,
@@ -510,11 +567,13 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
             "data": {"model": llm_res["model"]}
         }
 
-    # Graceful synthesis fallback
-    fallback_reply = f"Acknowledged '{text}'. All tools (Academic Satellite, Admissions Profiler, Web Search, Code Sandbox, System Telemetry) are online and ready."
+    # Honest failure report when model is offline
+    fallback_reply = "Language model is currently offline or unreachable. Please launch your local Ollama daemon ('ollama run qwen2.5:7b') or configure an API key in .env."
     memory.append_chat(session_id, "user", text)
     memory.append_chat(session_id, "assistant", fallback_reply)
     return {
         "reply": fallback_reply,
-        "tool_used": None
+        "tool_used": None,
+        "error": True,
+        "model_status": "offline"
     }

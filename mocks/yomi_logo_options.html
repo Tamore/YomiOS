@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yomi — Logo Mockups & Interactive Brand Studio</title>
+<style>
+  :root {
+    --chart-1: oklch(0.756 0.211 0); /* Custom Rose/Coral Accent */
+    --rose-hex: #fb7185;
+    --rose-dark: #e11d48;
+    --rose-glow: rgba(251, 113, 133, 0.35);
+    --bg: #09090b;
+    --card: #0e0e11;
+    --border: rgba(255, 255, 255, 0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: #f5f5f5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 40px 20px;
+    letter-spacing: -0.015em;
+  }
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+  }
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    color: #a1a1aa;
+    font-size: 15px;
+    max-width: 680px;
+    line-height: 1.5;
+  }
+
+  /* Selector Tabs */
+  .selector-bar {
+    display: flex;
+    gap: 8px;
+    background: #0e0e11;
+    border: 1px solid var(--border);
+    padding: 6px;
+    border-radius: 14px;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    background: transparent;
+    border: none;
+    color: #a1a1aa;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tab-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .tab-btn.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+
+  /* Mockup Section */
+  .mockup-display {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+  .mockup-card {
+    display: none;
+    flex-direction: column;
+    gap: 28px;
+    animation: fadeIn 0.25s ease;
+  }
+  .mockup-card.active {
+    display: flex;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Browser Simulation Chrome */
+  .browser-window {
+    background: #0e0e11;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  }
+  .browser-top {
+    background: #09090b;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .traffic-lights {
+    display: flex;
+    gap: 6px;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-red { background: #ff5f56; }
+  .dot-yellow { background: #ffbd2e; }
+  .dot-green { background: #27c93f; }
+  
+  .browser-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #0e0e11;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    padding: 6px 14px;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    color: #fff;
+    font-weight: 500;
+  }
+  .browser-url-bar {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    color: #71717a;
+    max-width: 480px;
+  }
+
+  /* Realistic Navbar Mockup */
+  .nav-simulation {
+    padding: 24px;
+    background: #09090b;
+  }
+  .nav-frame {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    padding: 4px;
+    border-radius: 16px;
+  }
+  .nav-panel {
+    background: #0e0e11;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .brand-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .brand-text {
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.025em;
+    color: #ffffff;
+  }
+  .brand-pill {
+    font-size: 10px;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    color: #a1a1aa;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    padding: 2px 7px;
+    border-radius: 9999px;
+  }
+  .nav-tabs {
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    gap: 2px;
+  }
+  .nav-tab-item {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 8px;
+    color: #a1a1aa;
+  }
+  .nav-tab-item.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+
+  /* 3-Column Touchpoint Grid */
+  .touchpoint-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .touchpoint-box {
+    background: #0e0e11;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .tp-label {
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #71717a;
+  }
+  .tp-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: #050507;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+    min-height: 120px;
+  }
+  .tp-desc {
+    font-size: 13px;
+    color: #a1a1aa;
+    line-height: 1.5;
+  }
+
+  /* Comparison Grid (All 5 together) */
+  .comparison-section {
+    border-top: 1px solid var(--border);
+    padding-top: 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .comparison-title {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .all-five-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+  .mini-card {
+    background: #0e0e11;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .mini-card:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    background: #141418;
+  }
+  .mini-card-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    text-align: center;
+  }
+  .mini-card-vibe {
+    font-size: 11px;
+    color: #71717a;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  
+  <header>
+    <div>
+      <h1>Yomi — Brandmark Mockup Studio</h1>
+      <p class="subtitle">
+        High-fidelity mocks showing each of the 5 logo options inside the real Bklit UI environment: browser tab favicon, header navigation bar, floating console, and hero display.
+      </p>
+    </div>
+    
+    <!-- Option Selector -->
+    <div class="selector-bar">
+      <button onclick="selectOption(1)" class="tab-btn active" id="btn-opt-1">
+        <span>Option 1: Origami Blade</span>
+      </button>
+      <button onclick="selectOption(2)" class="tab-btn" id="btn-opt-2">
+        <span>Option 2: Parametric Iris</span>
+      </button>
+      <button onclick="selectOption(3)" class="tab-btn" id="btn-opt-3">
+        <span>Option 3: Cyber-Kamon</span>
+      </button>
+      <button onclick="selectOption(4)" class="tab-btn" id="btn-opt-4">
+        <span>Option 4: Isometric Monolith</span>
+      </button>
+      <button onclick="selectOption(5)" class="tab-btn" id="btn-opt-5">
+        <span>Option 5: Zen Katana</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="mockup-display">
+
+    <!-- ========================================================================= -->
+    <!-- OPTION 1: ORIGAMI BLADE NEXUS                                             -->
+    <!-- ========================================================================= -->
+    <div class="mockup-card active" id="card-opt-1">
+      
+      <!-- Full Browser Window Mockup -->
+      <div class="browser-window">
+        <div class="browser-top">
+          <div class="traffic-lights">
+            <div class="dot dot-red"></div>
+            <div class="dot dot-yellow"></div>
+            <div class="dot dot-green"></div>
+          </div>
+          <!-- Tab Favicon Mock -->
+          <div class="browser-tab">
+            <svg width="14" height="14" viewBox="0 0 32 32" fill="none">
+              <path d="M6 6C6 5.45 6.45 5 7 5H12C12.6 5 13.15 5.35 13.4 5.9L16 11.5L12.5 14.5L6.5 8C6.18 7.65 6 7.18 6 6.7V6Z" fill="#ffffff"/>
+              <path d="M26 6C26 5.45 25.55 5 25 5H20C19.4 5 18.85 5.35 18.6 5.9L16 11.5L19.5 14.5L25.5 8C25.82 7.65 26 7.18 26 6.7V6Z" fill="#ffffff" fill-opacity="0.45"/>
+              <path d="M14 15.5H18L17.2 26.2C17.15 27 16.5 27.5 16 27.5C15.5 27.5 14.85 27 14.8 26.2L14 15.5Z" fill="#fb7185"/>
+              <polygon points="16,13 18.5,15.5 16,18 13.5,15.5" fill="#ffffff"/>
+            </svg>
+            <span>Yomi</span>
+          </div>
+          <div class="browser-url-bar">https://yomi.internal/hud</div>
+        </div>
+
+        <!-- Navbar In-Context Mock -->
+        <div class="nav-simulation">
+          <div class="nav-frame">
+            <div class="nav-panel">
+              <div class="brand-group">
+                <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+                  <defs>
+                    <linearGradient id="o1-nav-l" x1="6" y1="5" x2="16" y2="17" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stop-color="#ffffff"/>
+                      <stop offset="100%" stop-color="#d4d4d8"/>
+                    </linearGradient>
+                    <linearGradient id="o1-nav-r" x1="26" y1="5" x2="16" y2="17" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.75"/>
+                      <stop offset="100%" stop-color="#71717a" stop-opacity="0.35"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M6 6C6 5.45 6.45 5 7 5H12C12.6 5 13.15 5.35 13.4 5.9L16 11.5L12.5 14.5L6.5 8C6.18 7.65 6 7.18 6 6.7V6Z" fill="url(#o1-nav-l)"/>
+                  <path d="M26 6C26 5.45 25.55 5 25 5H20C19.4 5 18.85 5.35 18.6 5.9L16 11.5L19.5 14.5L25.5 8C25.82 7.65 26 7.18 26 6.7V6Z" fill="url(#o1-nav-r)"/>
+                  <path d="M14 15.5H18L17.2 26.2C17.15 27 16.5 27.5 16 27.5C15.5 27.5 14.85 27 14.8 26.2L14 15.5Z" fill="#fb7185"/>
+                  <polygon points="16,13 18.5,15.5 16,18 13.5,15.5" fill="#ffffff"/>
+                </svg>
+                <span class="brand-text">Yomi</span>
+                <span class="brand-pill">v2.0 · Bklit Engine</span>
+              </div>
+              <div class="nav-tabs">
+                <span class="nav-tab-item active">Intelligence HUD</span>
+                <span class="nav-tab-item">Academics & Dossier</span>
+                <span class="nav-tab-item">Nihongo Dojo</span>
+                <span class="nav-tab-item">MCP Integrations</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 Touchpoint Cards -->
+      <div class="touchpoint-grid">
+        <div class="touchpoint-box">
+          <span class="tp-label">1. Hero Display (96px)</span>
+          <div class="tp-content">
+            <svg width="84" height="84" viewBox="0 0 32 32" fill="none">
+              <path d="M6 6C6 5.45 6.45 5 7 5H12C12.6 5 13.15 5.35 13.4 5.9L16 11.5L12.5 14.5L6.5 8C6.18 7.65 6 7.18 6 6.7V6Z" fill="#ffffff"/>
+              <path d="M26 6C26 5.45 25.55 5 25 5H20C19.4 5 18.85 5.35 18.6 5.9L16 11.5L19.5 14.5L25.5 8C25.82 7.65 26 7.18 26 6.7V6Z" fill="#ffffff" fill-opacity="0.45"/>
+              <path d="M14 15.5H18L17.2 26.2C17.15 27 16.5 27.5 16 27.5C15.5 27.5 14.85 27 14.8 26.2L14 15.5Z" fill="#fb7185"/>
+              <polygon points="16,13 18.5,15.5 16,18 13.5,15.5" fill="#ffffff"/>
+            </svg>
+          </div>
+          <p class="tp-desc">
+            Aerospace-grade faceted wings with a center rose keel and diamond aperture.
+          </p>
+        </div>
+
+        <div class="touchpoint-box">
+          <span class="tp-label">2. Floating Pill Mock</span>
+          <div class="tp-content">
+            <div style="display:flex; align-items:center; gap:8px; padding:6px 12px; background:#0e0e11; border:1px solid rgba(255,255,255,0.12); border-radius:9999px; box-shadow:0 8px 20px rgba(0,0,0,0.4);">
+              <span style="width:6px; height:6px; border-radius:50%; background:#fb7185; box-shadow:0 0 8px #fb7185;"></span>
+              <span style="font-size:11px; font-weight:600; color:#fff;">Pipeline</span>
+              <span style="font-size:10px; font-family:monospace; color:#a1a1aa;">3 · 2</span>
+            </div>
+          </div>
+          <p class="tp-desc">
+            Compact micro-pill resting in the bottom-right of the dashboard without blocking actions.
+          </p>
+        </div>
+
+        <div class="touchpoint-box">
+          <span class="tp-label">3. Philosophy & Identity</span>
+          <div class="tp-content" style="flex-direction:column; align-items:flex-start; justify-content:center; gap:8px;">
+            <div style="font-weight:700; font-size:18px;">読み (Yomi)</div>
+            <div style="font-size:12px; color:#a1a1aa; line-height:1.4;">
+              Foresight & intuition. Perception (L) + Reasoning (R) converging to Action (Stem).
+            </div>
+          </div>
+          <p class="tp-desc">
+            Matches the dark, high-precision aesthetic of modern Japanese developer tools.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- OPTION 2: THE PARAMETRIC IRIS                                             -->
+    <!-- ========================================================================= -->
+    <div class="mockup-card" id="card-opt-2">
+      
+      <!-- Full Browser Window Mockup -->
+      <div class="browser-window">
+        <div class="browser-top">
+          <div class="traffic-lights">
+            <div class="dot dot-red"></div>
+            <div class="dot dot-yellow"></div>
+            <div class="dot dot-green"></div>
+          </div>
+          <!-- Tab Favicon Mock -->
+          <div class="browser-tab">
+            <svg width="14" height="14" viewBox="0 0 32 32" fill="none">
+              <path d="M6 7C6 7 9 6 14 11C16.5 13.5 17 16 16 17C15 18 12.5 17.5 10 15C5 10 6 7 6 7Z" fill="#ffffff"/>
+              <path d="M26 7C26 7 23 6 18 11C15.5 13.5 15 16 16 17C17 18 19.5 17.5 22 15C27 10 26 7 26 7Z" fill="#ffffff" fill-opacity="0.4"/>
+              <path d="M16 16.5C17.5 16.5 18.2 19 18.2 22.5C18.2 24.8 17.2 26.5 16 26.5C14.8 26.5 13.8 24.8 13.8 22.5C13.8 19 14.5 16.5 16 16.5Z" fill="#fb7185"/>
+              <circle cx="16" cy="12" r="1.5" fill="#ffffff"/>
+            </svg>
+            <span>Yomi</span>
+          </div>
+          <div class="browser-url-bar">https://yomi.internal/hud</div>
+        </div>
+
+        <!-- Navbar In-Context Mock -->
+        <div class="nav-simulation">
+          <div class="nav-frame">
+            <div class="nav-panel">
+              <div class="brand-group">
+                <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+                  <path d="M6 7C6 7 9 6 14 11C16.5 13.5 17 16 16 17C15 18 12.5 17.5 10 15C5 10 6 7 6 7Z" fill="#ffffff"/>
+                  <path d="M26 7C26 7 23 6 18 11C15.5 13.5 15 16 16 17C17 18 19.5 17.5 22 15C27 10 26 7 26 7Z" fill="#ffffff" fill-opacity="0.4"/>
+                  <path d="M16 16.5C17.5 16.5 18.2 19 18.2 22.5C18.2 24.8 17.2 26.5 16 26.5C14.8 26.5 13.8 24.8 13.8 22.5C13.8 19 14.5 16.5 16 16.5Z" fill="#fb7185"/>
+                  <circle cx="16" cy="12" r="1.5" fill="#ffffff"/>
+                </svg>
+                <span class="brand-text">Yomi</span>
+                <span class="brand-pill">v2.0 · Bklit Engine</span>
+              </div>
+              <div class="nav-tabs">
+                <span class="nav-tab-item active">Intelligence HUD</span>
+                <span class="nav-tab-item">Academics & Dossier</span>
+                <span class="nav-tab-item">Nihongo Dojo</span>
+                <span class="nav-tab-item">MCP Integrations</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 Touchpoint Cards -->
+      <div class="touchpoint-grid">
+        <div class="touchpoint-box">
+          <span class="tp-label">1. Hero Display (96px)</span>
+          <div class="tp-content">
+            <svg width="84" height="84" viewBox="0 0 32 32" fill="none">
+              <path d="M6 7C6 7 9 6 14 11C16.5 13.5 17 16 16 17C15 18 12.5 17.5 10 15C5 10 6 7 6 7Z" fill="#ffffff"/>
+              <path d="M26 7C26 7 23 6 18 11C15.5 13.5 15 16 16 17C17 18 19.5 17.5 22 15C27 10 26 7 26 7Z" fill="#ffffff" fill-opacity="0.4"/>
+              <path d="M16 16.5C17.5 16.5 18.2 19 18.2 22.5C18.2 24.8 17.2 26.5 16 26.5C14.8 26.5 13.8 24.8 13.8 22.5C13.8 19 14.5 16.5 16 16.5Z" fill="#fb7185"/>
+              <circle cx="16" cy="12" r="1.5" fill="#ffffff"/>
+            </svg>
+          </div>
+          <p class="tp-desc">
+            Directly inherits Bklit's continuous curvature and layered opacity lobes.
+          </p>
+        </div>
+
+        <div class="touchpoint-box">
+          <span class="tp-label">2. Floating Pill Mock</span>
+          <div class="tp-content">
+            <div style="display:flex; align-items:center; gap:8px; padding:6px 12px; background:#0e0e11; border:1px solid rgba(255,255,255,0.12); border-radius:9999px;">
+              <span style="width:6px; height:6px; border-radius:50%; background:#fb7185;"></span>
+              <span style="font-size:11px; font-weight:600; color:#fff;">Pipeline</span>
+              <span style="font-size:10px; font-family:monospace; color:#a1a1aa;">3 · 2</span>
+            </div>
+          </div>
+          <p class="tp-desc">
+            Soft squircle curves harmonizing with the rounded badges across the interface.
+          </p>
+        </div>
+
+        <div class="touchpoint-box">
+          <span class="tp-label">3. Philosophy & Identity</span>
+          <div class="tp-content" style="flex-direction:column; align-items:flex-start; justify-content:center; gap:8px;">
+            <div style="font-weight:700; font-size:18px;">The Neural Eye</div>
+            <div style="font-size:12px; color:#a1a1aa; line-height:1.4;">
+              Aperture of perception. Two sweeping petals form an eye over an anchor droplet.
+            </div>
+          </div>
+          <p class="tp-desc">
+            Fluid, organic, and mathematically pure.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- OPTION 3: THE CYBER-KAMON DIAMOND                                         -->
+    <!-- ========================================================================= -->
+    <div class="mockup-card" id="card-opt-3">
+      
+      <!-- Full Browser Window Mockup -->
+      <div class="browser-window">
+        <div class="browser-top">
+          <div class="traffic-lights">
+            <div class="dot dot-red"></div>
+            <div class="dot dot-yellow"></div>
+            <div class="dot dot-green"></div>
+          </div>
+          <!-- Tab Favicon Mock -->
+          <div class="browser-tab">
+            <svg width="14" height="14" viewBox="0 0 32 32" fill="none">
+              <polygon points="16,4 7,13 13,13 16,10" fill="#ffffff"/>
+              <polygon points="16,4 25,13 19,13 16,10" fill="#ffffff" fill-opacity="0.45"/>
+              <polygon points="16,13 21,18 16,28 11,18" fill="#fb7185"/>
+              <polygon points="16,7 13.5,11.5 18.5,11.5" fill="#09090b"/>
+            </svg>
+            <span>Yomi</span>
+          </div>
+          <div class="browser-url-bar">https://yomi.internal/hud</div>
+        </div>
+
+        <!-- Navbar In-Context Mock -->
+        <div class="nav-simulation">
+          <div class="nav-frame">
+            <div class="nav-panel">
+              <div class="brand-group">
+                <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+                  <polygon points="16,4 7,13 13,13 16,10" fill="#ffffff"/>
+                  <polygon points="16,4 25,13 19,13 16,10" fill="#ffffff" fill-opacity="0.45"/>
+                  <polygon points="16,13 21,18 16,28 11,18" fill="#fb7185"/>
+                  <polygon points="16,7 13.5,11.5 18.5,11.5" fill="#0e0e11"/>
+                </svg>
+                <span class="brand-text">Yomi</span>
+                <span class="brand-pill">v2.0 · Bklit Engine</span>
+              </div>
+              <div class="nav-tabs">
+                <span class="nav-tab-item active">Intelligence HUD</span>
+                <span class="nav-tab-item">Academics & Dossier</span>
+                <span class="nav-tab-item">Nihongo Dojo</span>
+                <span class="nav-tab-item">MCP Integrations</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 Touchpoint Cards -->
+      <div class="touchpoint-grid">
+        <div class="touchpoint-box">
+          <span class="tp-label">1. Hero Display (96px)</span>
+          <div class="tp-content">
+            <svg width="84" height="84" viewBox="0 0 32 32" fill="none">
+              <polygon points="16,4 7,13 13,13 16,10" fill="#ffffff"/>
+              <polygon points="16,4 25,13 19,13 16,10" fill="#ffffff" fill-opacity="0.45"/>
+              <polygon points="16,13 21,18 16,28 11,18" fill="#fb7185"/>
+              <polygon points="16,7 13.5,11.5 18.5,11.5" fill="#050507"/>
+            </svg>
+          </div>
+          <p class="tp-desc">
+            Samurai Kamon diamond geometry with negative-space "Y" core.
+          </p>
+        </div>
+
+        <div class="touchpoint-box">
+          <span class="tp-label">2. Floating Pill Mock</span>
+          <div class="tp-content">
+            <div style="display:flex; align-items:center; gap:8px; padding:6px 12px; background:#0e0e11; border:1px solid rgba(255,255,255,0.12); border-radius:9999px;">
+              <span style="width:6px; height:6px; border-radius:50%; background:#fb7185;"></span>
+              <span style="font-size:11px; font-weight:600; color:#fff;">Pipeline</span>
+              <span style="font-size:10px; font-family:monospace; color:#a1a1aa;">3 · 2</span>
+            </div>
+          </div>
+          <p class="tp-desc">
+            Sharp 45° angles bring sovereign architectural balance.
+          </p>
+        </div>
+
+        <div class="touchpoint-box">
+          <span class="tp-label">3. Philosophy & Identity</span>
+          <div class="tp-content" style="flex-direction:column; align-items:flex-start; justify-content:center; gap:8px;">
+            <div style="font-weight:700; font-size:18px;">家紋 (Kamon)</div>
+            <div style="font-size:12px; color:#a1a1aa; line-height:1.4;">
+              Traditional crest structure. Discipline, resilience, and sovereign authority.
+            </div>
+          </div>
+          <p class="tp-desc">
+            Classic Japanese heraldry updated for high-performance software.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- OPTION 4: THE ISOMETRIC MONOLITH                                          -->
+    <!-- ========================================================================= -->
+    <div class="mockup-card" id="card-opt-4">
+      
+      <!-- Full Browser Window Mockup -->
+      <div class="browser-window">
+        <div class="browser-top">
+          <div class="traffic-lights">
+            <div class="dot dot-red"></div>
+            <div class="dot dot-yellow"></div>
+            <div class="dot dot-green"></div>
+          </div>
+          <!-- Tab Favicon Mock -->
+          <div class="browser-tab">
+            <svg width="14" height="14" viewBox="0 0 32 32" fill="none">
+              <polygon points="6,7 12,4 16,11 10,14" fill="#ffffff"/>
+              <polygon points="26,7 20,4 16,11 22,14" fill="#71717a"/>
+              <polygon points="10,14 16,11 22,14 16,17" fill="#ffffff"/>
+              <rect x="13.5" y="17.5" width="5" height="9.5" rx="1" fill="#fb7185"/>
+            </svg>
+            <span>Yomi</span>
+          </div>
+          <div class="browser-url-bar">https://yomi.internal/hud</div>
+        </div>
+
+        <!-- Navbar In-Context Mock -->
+        <div class="nav-simulation">
+          <div class="nav-frame">
+            <div class="nav-panel">
+              <div class="brand-group">
+                <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+                  <polygon points="6,7 12,4 16,11 10,14" fill="#ffffff"/>
+                  <polygon points="26,7 20,4 16,11 22,14" fill="#71717a"/>
+                  <polygon points="10,14 16,11 22,14 16,17" fill="#ffffff"/>
+                  <rect x="13.5" y="17.5" width="5" height="9.5" rx="1" fill="#fb7185"/>
+                </svg>
+                <span class="brand-text">Yomi</span>
+                <span class="brand-pill">v2.0 · Bklit Engine</span>
+              </div>
+              <div class="nav-tabs">
+                <span class="nav-tab-item active">Intelligence HUD</span>
+                <span class="nav-tab-item">Academics & Dossier</span>
+                <span class="nav-tab-item">Nihongo Dojo</span>
+                <span class="nav-tab-item">MCP Integrations</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 Touchpoint Cards -->
+      <div class="touchpoint-grid">
+        <div class="touchpoint-box">
+          <span class="tp-label">1. Hero Display (96px)</span>
+          <div class="tp-content">
+            <svg width="84" height="84" viewBox="0 0 32 32" fill="none">
+              <polygon points="6,7 12,4 16,11 10,14" fill="#ffffff"/>
+              <polygon points="26,7 20,4 16,11 22,14" fill="#71717a"/>
+              <polygon points="10,14 16,11 22,14 16,17" fill="#ffffff"/>
+              <rect x="13.5" y="17.5" width="5" height="9.5" rx="1" fill="#fb7185"/>
+            </svg>
+          </div>
+          <p class="tp-desc">
+            Interlocking polyhedral stone blocks rendered in 3D isometric projection.
+          </p>
+        </div>
+
+        <div class="touchpoint-box">
+          <span class="tp-label">2. Floating Pill Mock</span>
+          <div class="tp-content">
+            <div style="display:flex; align-items:center; gap:8px; padding:6px 12px; background:#0e0e11; border:1px solid rgba(255,255,255,0.12); border-radius:9999px;">
+              <span style="width:6px; height:6px; border-radius:50%; background:#fb7185;"></span>
+              <span style="font-size:11px; font-weight:600; color:#fff;">Pipeline</span>
+              <span style="font-size:10px; font-family:monospace; color:#a1a1aa;">3 · 2</span>
+            </div>
+          </div>
+          <p class="tp-desc">
+            Solid physical presence like custom Teenage Engineering hardware.
+          </p>
+        </div>
+
+        <div class="touchpoint-box">
+          <span class="tp-label">3. Philosophy & Identity</span>
+          <div class="tp-content" style="flex-direction:column; align-items:flex-start; justify-content:center; gap:8px;">
+            <div style="font-weight:700; font-size:18px;">Physical Compute</div>
+            <div style="font-size:12px; color:#a1a1aa; line-height:1.4;">
+              Tangible edge infrastructure, FPGA nodes, and distributed stability.
+            </div>
+          </div>
+          <p class="tp-desc">
+            Heavy, structural, and architecturally permanent.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- OPTION 5: THE ZEN KATANA ARC                                              -->
+    <!-- ========================================================================= -->
+    <div class="mockup-card" id="card-opt-5">
+      
+      <!-- Full Browser Window Mockup -->
+      <div class="browser-window">
+        <div class="browser-top">
+          <div class="traffic-lights">
+            <div class="dot dot-red"></div>
+            <div class="dot dot-yellow"></div>
+            <div class="dot dot-green"></div>
+          </div>
+          <!-- Tab Favicon Mock -->
+          <div class="browser-tab">
+            <svg width="14" height="14" viewBox="0 0 32 32" fill="none">
+              <path d="M8 8C12 12 14.5 15 16 18.5V26.5" stroke="#fb7185" stroke-width="3" stroke-linecap="round"/>
+              <path d="M24 8C20 12 17.5 15 16 18.5" stroke="#ffffff" stroke-opacity="0.45" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="16" cy="18.5" r="1.6" fill="#ffffff"/>
+            </svg>
+            <span>Yomi</span>
+          </div>
+          <div class="browser-url-bar">https://yomi.internal/hud</div>
+        </div>
+
+        <!-- Navbar In-Context Mock -->
+        <div class="nav-simulation">
+          <div class="nav-frame">
+            <div class="nav-panel">
+              <div class="brand-group">
+                <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+                  <path d="M8 8C12 12 14.5 15 16 18.5V26.5" stroke="#fb7185" stroke-width="3" stroke-linecap="round"/>
+                  <path d="M24 8C20 12 17.5 15 16 18.5" stroke="#ffffff" stroke-opacity="0.45" stroke-width="3" stroke-linecap="round"/>
+                  <circle cx="16" cy="18.5" r="1.6" fill="#ffffff"/>
+                </svg>
+                <span class="brand-text">Yomi</span>
+                <span class="brand-pill">v2.0 · Bklit Engine</span>
+              </div>
+              <div class="nav-tabs">
+                <span class="nav-tab-item active">Intelligence HUD</span>
+                <span class="nav-tab-item">Academics & Dossier</span>
+                <span class="nav-tab-item">Nihongo Dojo</span>
+                <span class="nav-tab-item">MCP Integrations</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 Touchpoint Cards -->
+      <div class="touchpoint-grid">
+        <div class="touchpoint-box">
+          <span class="tp-label">1. Hero Display (96px)</span>
+          <div class="tp-content">
+            <svg width="84" height="84" viewBox="0 0 32 32" fill="none">
+              <path d="M8 8C12 12 14.5 15 16 18.5V26.5" stroke="#fb7185" stroke-width="3" stroke-linecap="round"/>
+              <path d="M24 8C20 12 17.5 15 16 18.5" stroke="#ffffff" stroke-opacity="0.45" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="16" cy="18.5" r="1.6" fill="#ffffff"/>
+            </svg>
+          </div>
+          <p class="tp-desc">
+            Sweeping calligraphic katana curve with a single cardinal anchor pip.
+          </p>
+        </div>
+
+        <div class="touchpoint-box">
+          <span class="tp-label">2. Floating Pill Mock</span>
+          <div class="tp-content">
+            <div style="display:flex; align-items:center; gap:8px; padding:6px 12px; background:#0e0e11; border:1px solid rgba(255,255,255,0.12); border-radius:9999px;">
+              <span style="width:6px; height:6px; border-radius:50%; background:#fb7185;"></span>
+              <span style="font-size:11px; font-weight:600; color:#fff;">Pipeline</span>
+              <span style="font-size:10px; font-family:monospace; color:#a1a1aa;">3 · 2</span>
+            </div>
+          </div>
+          <p class="tp-desc">
+            Uncluttered, airy, and ultra-minimalist execution.
+          </p>
+        </div>
+
+        <div class="touchpoint-box">
+          <span class="tp-label">3. Philosophy & Identity</span>
+          <div class="tp-content" style="flex-direction:column; align-items:flex-start; justify-content:center; gap:8px;">
+            <div style="font-weight:700; font-size:18px;">刀 (Katana)</div>
+            <div style="font-size:12px; color:#a1a1aa; line-height:1.4;">
+              Surgical focus and decisive speed. Cut through noise with maximum discernment.
+            </div>
+          </div>
+          <p class="tp-desc">
+            Luxury editorial minimalism in the tradition of Japanese design masters.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Quick Comparison Selector Grid -->
+  <div class="comparison-section">
+    <div class="comparison-title">Direct Side-by-Side Comparison</div>
+    <div class="all-five-grid">
+      
+      <div class="mini-card" onclick="selectOption(1)">
+        <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
+          <path d="M6 6C6 5.45 6.45 5 7 5H12C12.6 5 13.15 5.35 13.4 5.9L16 11.5L12.5 14.5L6.5 8C6.18 7.65 6 7.18 6 6.7V6Z" fill="#ffffff"/>
+          <path d="M26 6C26 5.45 25.55 5 25 5H20C19.4 5 18.85 5.35 18.6 5.9L16 11.5L19.5 14.5L25.5 8C25.82 7.65 26 7.18 26 6.7V6Z" fill="#ffffff" fill-opacity="0.45"/>
+          <path d="M14 15.5H18L17.2 26.2C17.15 27 16.5 27.5 16 27.5C15.5 27.5 14.85 27 14.8 26.2L14 15.5Z" fill="#fb7185"/>
+          <polygon points="16,13 18.5,15.5 16,18 13.5,15.5" fill="#ffffff"/>
+        </svg>
+        <span class="mini-card-name">1. Origami Blade</span>
+        <span class="mini-card-vibe">Aerospace / Mon</span>
+      </div>
+
+      <div class="mini-card" onclick="selectOption(2)">
+        <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
+          <path d="M6 7C6 7 9 6 14 11C16.5 13.5 17 16 16 17C15 18 12.5 17.5 10 15C5 10 6 7 6 7Z" fill="#ffffff"/>
+          <path d="M26 7C26 7 23 6 18 11C15.5 13.5 15 16 16 17C17 18 19.5 17.5 22 15C27 10 26 7 26 7Z" fill="#ffffff" fill-opacity="0.4"/>
+          <path d="M16 16.5C17.5 16.5 18.2 19 18.2 22.5C18.2 24.8 17.2 26.5 16 26.5C14.8 26.5 13.8 24.8 13.8 22.5C13.8 19 14.5 16.5 16 16.5Z" fill="#fb7185"/>
+          <circle cx="16" cy="12" r="1.5" fill="#ffffff"/>
+        </svg>
+        <span class="mini-card-name">2. Parametric Iris</span>
+        <span class="mini-card-vibe">Bklit Curvature</span>
+      </div>
+
+      <div class="mini-card" onclick="selectOption(3)">
+        <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
+          <polygon points="16,4 7,13 13,13 16,10" fill="#ffffff"/>
+          <polygon points="16,4 25,13 19,13 16,10" fill="#ffffff" fill-opacity="0.45"/>
+          <polygon points="16,13 21,18 16,28 11,18" fill="#fb7185"/>
+          <polygon points="16,7 13.5,11.5 18.5,11.5" fill="#050507"/>
+        </svg>
+        <span class="mini-card-name">3. Cyber-Kamon</span>
+        <span class="mini-card-vibe">Samurai Diamond</span>
+      </div>
+
+      <div class="mini-card" onclick="selectOption(4)">
+        <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
+          <polygon points="6,7 12,4 16,11 10,14" fill="#ffffff"/>
+          <polygon points="26,7 20,4 16,11 22,14" fill="#71717a"/>
+          <polygon points="10,14 16,11 22,14 16,17" fill="#ffffff"/>
+          <rect x="13.5" y="17.5" width="5" height="9.5" rx="1" fill="#fb7185"/>
+        </svg>
+        <span class="mini-card-name">4. Monolith</span>
+        <span class="mini-card-vibe">3D Hardware</span>
+      </div>
+
+      <div class="mini-card" onclick="selectOption(5)">
+        <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
+          <path d="M8 8C12 12 14.5 15 16 18.5V26.5" stroke="#fb7185" stroke-width="3" stroke-linecap="round"/>
+          <path d="M24 8C20 12 17.5 15 16 18.5" stroke="#ffffff" stroke-opacity="0.45" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="16" cy="18.5" r="1.6" fill="#ffffff"/>
+        </svg>
+        <span class="mini-card-name">5. Zen Katana</span>
+        <span class="mini-card-vibe">Editorial Luxury</span>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function selectOption(optNum) {
+    // Hide all cards
+    document.querySelectorAll('.mockup-card').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+    // Show selected card
+    const targetCard = document.getElementById('card-opt-' + optNum);
+    const targetBtn = document.getElementById('btn-opt-' + optNum);
+    if (targetCard) targetCard.classList.add('active');
+    if (targetBtn) targetBtn.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+
+</body>
+</html>

@@ -1,47 +1,26 @@
-# 🌌 Yomi OS: Empirical Design, Multi-Agent Runtime Orchestration, and Self-Adaptive Systems
-## Living Research Monograph, Architecture Blueprint & Engineering Laboratory Log
+# Yomi OS: Technical Architecture, Multi-Agent Runtime & Development Log
 
-**Author:** Nirmiti R. Tamore  
-**Domain:** Autonomous Multi-Agent Systems, Event-Driven Middleware, Distributed Reliability  
-**Academic Target:** Foundational Base Model & Experimental Platform for Master's Degree in Japan (AY2027 Intake)  
-**Primary Research Alignment:** Self-Adaptive Distributed Software (*Prof. Kenji Tei / Science Tokyo*), Dependable Distributed Systems (*Prof. Xavier Défago / Science Tokyo*), Distributed Systems & Middleware (*Prof. Hiroaki Fukuda / SIT*), Cyber-Physical Production Networks (*Prof. Shigeru Fujimura / Waseda IPS*).  
-**Repository Location:** `D:\Projects\yomi-assistant`  
-**Initial Baseline Version:** `v2.0.0-alpha`  
-**Document Status:** Active Living Research Monograph  
+## System Architecture, Design Decisions & Verified Engineering Baseline
+
+**System:** Yomi OS (Executive Intelligence & Distributed Agent Runtime)  
+**Architecture:** Python FastAPI Async Core + React 19 Bklit UI + Model Context Protocol (MCP) Server  
+**Current Branch:** `fix/audit-repairs`  
+**Repository Location:** `D:\Projects\Yomi`  
 
 ---
 
-## 📑 Abstract & Research Motivation
+## 1. Abstract & System Overview
 
-As autonomous artificial intelligence agents transition from single-prompt reasoning benchmarks to persistent, multi-domain operating environments, conventional monolithic architectures reveal severe structural deficiencies:
-1. **The Latency-Interactivity Paradox:** Routing every user interaction through an autoregressive Large Language Model introduces 800ms–2500ms of Time-to-First-Token (TTFT) latency, rendering conversational executive HUDs sluggish for deterministic operations (e.g., system status, task queuing, telemetry inspection).
-2. **Context Window Amnesia & Workspace Isolation:** Contemporary IDE coding assistants operate in strict directory-level isolation, losing architectural rationale, design trade-offs, and historical decisions across multi-repository lifecycles.
-3. **Decoupled Worker Fragility:** Sub-agents spawned for specialized tasks (e.g., academic literature synthesis, code profiling, OS control) lack deterministic state reconciliation, distributed trace observability, and bounded failure recovery mechanisms.
+Yomi OS is a local-first personal executive assistant and autonomous agent testbed. The system addresses common challenges in local AI runtime orchestration:
 
-**Yomi OS** is engineered as an empirical prototype to resolve these core challenges. It serves as both a production-grade personal executive command HUD and a rigorous, reproducible experimental testbed for Master's-level research in Japan.
-
----
-
-## 🔬 Core Academic Research Hypotheses & Questions
-
-### Research Question 1 (RQ1): Hybrid Sub-Millisecond Intent Routing
-> *Can a dual-tier dispatch architecture (deterministic heuristic/regex router running in $\le 1\text{ms}$ + asynchronous background LLM synthesis) maintain executive interface responsiveness while preserving generative conversational intelligence?*
-
-* **Hypothesis:** 85%+ of executive commands (telemetry, task mutations, roadmap progression, OS application launching) exhibit deterministic syntax and do not require autoregressive token generation. By handling these in $< 1\text{ms}$ at the edge and delegating only ambiguous semantic queries to local/remote LLM backends, user-perceived latency drops by over 95%.
-
-### Research Question 2 (RQ2): Cross-Project Spatial Memory via Model Context Protocol (MCP)
-> *How does exposing a global, vector-indexed spatial memory server via the Model Context Protocol (MCP) alter developer task completion rates and cross-repository consistency compared to isolated single-folder IDE environments?*
-
-* **Hypothesis:** Exposing structured context graphs across decoupled projects (e.g., `SkillMesh`, `Japan Prep`, `Yomi OS`) through standard MCP endpoints (`yomi_get_project_context`, `yomi_search_global_memory`) mitigates context degradation without ballooning token budgets.
-
-### Research Question 3 (RQ3): Self-Adaptive Plan Verification & Crash Recovery
-> *Can event-driven worker sub-agents maintain eventual consistency across asynchronous multi-hop execution pipelines using light-weight broker checkpoints and bounded state reconciliation?*
-
-* **Hypothesis:** Extending the fault-tolerance models developed in `SkillMesh v2` (Redis Streams + Celery crash recovery) to multi-agent task graphs prevents cascading sub-agent failures and guarantees task idempotency.
+1. **Deterministic Latency Separation:** Separates deterministic operations (hardware telemetry, task updates, ArXiv searches, local document indexing) from generative LLM inference.
+2. **Local-First State Retention:** Uses embedded SQLite for task tracking, activity logging, and bounded multi-turn conversation history.
+3. **Model Context Protocol (MCP) Server:** Exposes a standard JSON-RPC 2.0 STDIO MCP server interface (`backend/mcp_server.py`) allowing external IDEs and agents to query project roadmaps, persistent memory, and host telemetry.
+4. **Security & Boundary Containment:** Strict workspace path containment, comprehensive SSRF protection on HTTP fetching and redirects, and default-disabled arbitrary Python execution.
 
 ---
 
-## 🏛️ System Architecture Specification
+## 2. System Architecture
 
 ```text
 +-------------------------------------------------------------------------------------------------------+
@@ -53,151 +32,70 @@ As autonomous artificial intelligence agents transition from single-prompt reaso
       v                                            v                                            v
 +--------------------------+          +--------------------------+          +--------------------------+
 |   TIER 1: FRONTEND HUD   |          |    TIER 2: CORE BRAIN    |          |    TIER 3: SATELLITES    |
-| (Chromium Backlit Shell) |          |   (FastAPI Async Core)   |          |  (Decoupled Sub-Agents)  |
+| (Chromium / Vite React)  |          |   (FastAPI Async Core)   |          |  (Decoupled Sub-Agents)  |
 |                          |          |                          |          |                          |
-| • Obsidian Monochromatic | <======> | • Sub-1ms Intent Router  | <======> | • Academic Research Tool |
-| • Hardware Notch Gauges  | (WS/IPC) | • SQLite State Matrix    | (Subproc)|   (ArXiv, Scholar, PDF)  |
-| • Concentric Rings       |          | • Edge-TTS Vocal Engine  |          | • MCP Spatial Memory     |
-| • Zero-Lag Local DOM     |          | • Real-Time Telemetry    |          | • SkillMesh v2 Observer  |
+| • Bklit Obsidian Theme   | <======> | • Intent Dispatcher      | <======> | • ArXiv Research Sat     |
+| • Hardware Telemetry     | (HTTP/WS)| • SQLite Storage Pool    | (Subproc)|   (ArXiv API, PDF Brief) |
+| • Task & Pipeline Drawer |          | • Memory & Context Store |          | • MCP Stdio Server Host  |
+| • Japanese Flashcard Dojo|          | • Security Containment   |          | • CiteX REST Bridge      |
 +--------------------------+          +--------------------------+          +--------------------------+
 ```
 
-### 1. Tier 1: Minimalist Backlit Monochromatic HUD
-* **Design Philosophy:** Inspired by high-end avionics cockpits and brutalist monochrome interfaces (`#07080a`, `#0e1014`, `#14171d`). Zero tacky neon; pure functional hierarchy.
-* **Technology:** React 19 + TypeScript + Vite. Standalone Chromium App Mode (`chrome.exe --app=...`) delivering native window performance without Electron bloat (saving ~180MB RAM).
-* **Hardware Gauges:** Custom SVG/CSS Notch dials rendering real-time CPU, RAM, and Battery state received via WebSocket push.
-* **Telemetry Cadence:** Asynchronous push every 1.5 seconds; zero client-side polling.
-
-### 2. Tier 2: Asynchronous Core Engine & Intent Router
-* **Framework:** Python 3.12+ FastAPI with ASGI asynchronous event loop.
-* **Intent Routing Pipeline:**
-  $$\text{Input Query} \xrightarrow{\text{Tokenize \& Regex Match}} \begin{cases} \text{Tier 1 Match} \rightarrow \text{Direct Sub-1ms Execution} \\ \text{Ambiguous / Complex} \rightarrow \text{Ollama / DeepSeek Async Stream} \end{cases}$$
-* **Speech Synthesis:** `edge-tts` streaming neural audio with W3C SSML breath pacing (400ms sentence-boundary pause, 200ms clause pause) streamed in-memory to browser Web Audio API.
-
-### 3. Tier 3: Specialized Decoupled Satellites
-* **Academic Literature Engine (SearchAgent + SynthesisAgent + CitationAgent):** Queries ArXiv/Semantic Scholar, extracts methodology and empirical results into structured PDF executive briefs, and formats BibTeX entries.
-* **MCP Server Engine:** Standard STDIO/SSE protocol host exposing Yomi's persistent memory to Antigravity IDE and external agents.
-* **SkillMesh Telemetry Fabric:** Distributed trace identifiers and latency hop monitoring for all worker sub-processes.
-
 ---
 
-## 📊 Empirical Metrics & Design Decisions Table
+## 3. Design Decisions & Verified Baseline
 
-| Component | Design Decision | Chosen Approach | Rejected Alternative | Research Justification |
+| Component | Design Decision | Chosen Approach | Rejected Alternative | Engineering Rationale |
 | :--- | :--- | :--- | :--- | :--- |
-| **Desktop Shell** | Runtime Framework | Chromium App Mode (`--app`) | Electron / Tauri | Eliminates bundled runtime bloat; starts in $< 300\text{ms}$; uses OS-installed Chrome. |
-| **Intent Dispatch** | Routing Logic | Two-Tier Hybrid (Regex + Local LLM) | Pure LLM Chain / LangChain | Pure LLM introduces 1.5s+ latency for simple tasks like "launch browser" or "check CPU". |
-| **Telemetry Sync** | Client-Server Comm | Bidirectional WebSockets | HTTP REST Polling | Eliminates polling overhead and HTTP header negotiation; reduces network CPU consumption to $< 0.1\%$. |
-| **Voice Synthesis** | Audio Delivery | Edge-TTS with In-Memory Buffers | Local pyttsx3 / PyGame SDL | Pygame has MSVC C++ wheel build issues on Python 3.14+; Edge-TTS provides human-grade neural voices. |
-| **Persistence** | Data Layer | Embedded SQLite with WAL mode | Heavy PostgreSQL / MongoDB | Zero-daemon setup; portable single-file database (`yomi.db`); atomic ACID transactions. |
+| **Frontend Shell** | Runtime Framework | React 19 + Vite + Tailwind v4 | Electron / Tauri | Eliminates bundled framework overhead; fast HMR; runs in browser or Chrome app mode. |
+| **Intent Dispatch** | Routing Logic | Two-Tier Hybrid (Pattern router + Local LLM) | Pure LLM Chain | Pattern router immediately handles search, tasks, and telemetry without LLM token latency. |
+| **Persistence** | Data Layer | SQLite with Foreign Keys | Heavy PostgreSQL daemon | Zero-daemon setup; single-file storage (`yomi.db`); atomic ACID transactions. |
+| **Execution Security** | Code Runner | Disabled by default; explicit opt-in required | Unrestricted auto-exec | Prevents unauthenticated remote code execution via web or chat interfaces. |
+| **Network Boundaries** | SSRF Defense | Strict DNS resolution + redirect hop checking | Blind `follow_redirects` | Blocks private, loopback, CGNAT, and link-local address targets. |
 
 ---
 
-## 🛠️ Chronological Engineering Laboratory Log
+## 4. Chronological Engineering & Audit Milestones
 
-### Milestone 1: Architectural Inception & HUD Foundation
-* **Date:** Late October 2026
-* **Status:** Complete ✅
-* **Objectives:** 
-  - Design the visual language and hardware telemetry display for Yomi 2.0.
-  - Implement custom SVG Notch Gauges and Concentric Progress Rings.
-* **Engineering Notes:**
-  - Standard circular gauges lacked high-density information display. Developed a bespoke 14-notch radial dial with dynamic illumination thresholds.
-  - Vite build pipeline optimized (`tsc -b && vite build`) generating clean production bundles in $1.21\text{s}$.
+### Milestone 1: Core Engine & Fast-Dispatch
+* **Status:** Complete & Verified
+* FastAPI backend with REST endpoints on `127.0.0.1:8765`.
+* Intent routing in `backend/brain.py` supporting natural commands (`paper on ...`, `add task: ...`, `telemetry`, `search web ...`).
+* Bounded multi-turn conversational memory with SQLite session storage (`conversation_history`).
 
-### Milestone 2: Sub-Millisecond Router & Web Intelligence
-* **Date:** 24 October 2026 – 27 October 2026
-* **Status:** Complete ✅
-* **Objectives:**
-  - Build `backend/brain.py` with instant regex intent parsing.
-  - Integrate BeautifulSoup + ReportLab for single-command web deep-reading and PDF brief generation.
-* **Empirical Validation:**
-  - Web summarization tool successfully isolates core article bodies, strips ads/scripts, and compiles structured summaries saved to `exports/` with direct download capability.
+### Milestone 2: Academic Research Satellite (Literature & BibTeX Pipeline)
+* **Status:** Complete & Verified
+* Decoupled `search_arxiv` and `search_semantic_scholar` query pipeline.
+* Monochromatic executive research brief PDF generator using ReportLab with Unicode and Japanese font support (`HeiseiKakuGo-W5`, `HeiseiMin-W3`).
+* Automatic BibTeX citation generator with clean cite-keys.
+* Clear distinction between abstract/metadata briefs and full-text paper synthesis.
 
-### Milestone 3: Repository Isolation & Packaging Stabilization
-* **Date:** 2 November 2026 – 3 November 2026
-* **Status:** Complete ✅
-* **Objectives:**
-  - Move Yomi OS cleanly out of temporary directories into permanent workspace (`D:\Projects\yomi-assistant`).
-  - Resolve Python 3.14 import path nuances (`sys.path.insert`) to ensure deterministic CLI execution from any working directory.
-* **Engineering Notes:**
-  - Eliminated legacy SDL/pygame dependencies that caused compilation failures.
-  - Verified `backend.main` and `backend.brain` direct execution.
+### Milestone 3: Model Context Protocol (MCP) Host
+* **Status:** Complete & Verified
+* Standard JSON-RPC 2.0 STDIO MCP server (`backend/mcp_server.py`).
+* Exposes tools: `yomi_get_project_context`, `yomi_search_global_memory`, `yomi_spawn_subagent`, `yomi_execute_subagent`, `yomi_get_telemetry`, `yomi_add_task`.
+* Proper error reporting with `isError: True` on unknown tools and failures.
 
-### Milestone 4: Academic Research Satellite (Literature & Citation Pipeline)
-* **Date:** 3 November 2026
-* **Status:** Complete & Integrated ✅
-* **Objectives:**
-  - Implement decoupled `SearchAgent` (ArXiv & Semantic Scholar API queries with fallback).
-  - Implement `SynthesisAgent` for academic paper metadata extraction and structured executive brief PDF compilation (`ReportLab`).
-  - Implement `CitationAgent` for automated standard BibTeX (`@article{...}`) and LaTeX citation generation.
-  - Wire into sub-millisecond intent router (`backend/brain.py`) under `research <topic>` / `arxiv <id>`.
-* **Empirical Validation & Benchmarks:**
-  - Real-world query benchmark (`"research distributed fault tolerance"`) retrieved primary literature, extracted author/abstract metadata, formatted BibTeX, and synthesized a publication-grade PDF (`Orthogonal_Fault_Tolerance_for_Dynamically_Adaptiv_Research_Brief.pdf`) in **3.82s total pipeline latency**.
-  - Generated briefs are automatically served via FastAPI (`/api/exports/{filename}`) and rendered in the Chromium HUD with one-click download.
-* **Significance for Japan Admissions:**
-  - Directly powers Nirmiti's literature reviews for prospective Japanese professors (Prof. Kenji Tei, Prof. Xavier Défago, Prof. Hiroaki Fukuda, Prof. Shigeru Fujimura).
+### Milestone 4: Security Hardening & Containment
+* **Status:** Complete & Verified
+* Centralized security policy in `backend/config.py`.
+* `validate_workspace_path` prevents directory traversal across document reader, workspace manager, and Drive staging.
+* `validate_safe_url` and `safe_http_get` block SSRF attacks on initial queries and on every redirect hop.
+* Arbitrary Python execution runner strictly disabled by default (returns HTTP 403).
+* CORS restricted to loopback origins by default.
 
-### Milestone 5: Yomi OS Model Context Protocol (MCP) Host
-* **Date:** 4 November 2026
-* **Status:** Complete & Verified ✅
-* **Objectives:**
-  - Implement standard JSON-RPC 2.0 STDIO MCP server (`backend/mcp_server.py`) conforming to Model Context Protocol specification.
-  - Expose tools: `yomi_get_project_context`, `yomi_search_global_memory`, `yomi_spawn_subagent`, `yomi_execute_subagent`, `yomi_get_telemetry`, and `yomi_add_task`.
-  - Provide auto-generated configuration file (`mcp_config.json`) ready for Antigravity IDE, Claude Code, and Cursor.
-* **Empirical Validation:**
-  - Tested JSON-RPC tool calls for telemetry inspection and cross-project memory search over persistent SQLite store (`yomi.db`). Returns formatted context in $< 15\text{ms}$.
-
-### Milestone 6: Core Meta-Agent Factory Engine
-* **Date:** 4 November 2026
-* **Status:** Complete & Integrated ✅
-* **Objectives:**
-  - Dynamic agent schema synthesis (`backend/meta_agent_factory.py`) turning high-level prompts into structured worker schemas (`name`, `role`, `tools_bound`, `schedule`).
-  - Isolated worker execution runtime binding academic research, web summarization, and host telemetry.
-  - Sub-agent lifecycle tracking in SQLite database (`subagents` table) with audit trail logging.
-  - Fast-router integration in `backend/brain.py` supporting natural syntax: `"spawn agent to monitor <task>"` and `"run agent <name>"`.
-
-### Milestone 7: Backlit HUD Satellite Panel & End-to-End System Delivery
-* **Date:** 4 November 2026
-* **Status:** Complete & Production Bundled ✅
-* **Objectives:**
-  - Integrate dedicated **Autonomous Sub-Agents & Satellites** panel into the React 19 / TypeScript Chromium HUD (`frontend/src/App.tsx`).
-  - Live status pills (`IDLE`, `RUNNING`, `FAILED`), bound tool chips, and real-time execution outputs.
-  - 1-click execution (`Play`), decommissioning (`Trash`), and dynamic agent prompt deployment capsule.
-  - Production bundle verified (`dist/` compiled cleanly in $1.43\text{s}$).
-
-### Milestone 8: Sovereign Multi-Tool Suite, Hybrid Brain & Persistent Profile Memory
-* **Date:** 6 November 2026
-* **Status:** Complete & Empirically Validated ✅
-* **Objectives:**
-  - Build persistent neural memory architecture (`backend/memory.py`) in SQLite with auto-recall of applicant credentials, research topics, target professors, and preferences.
-  - Implement **Unified Multi-Provider LLM Client** (`backend/llm_client.py`) supporting local Ollama (`qwen2.5:7b`), Gemini API, and Groq with sub-2s connect timeout fallback.
-  - Expand tool suite in `backend/tools/`:
-    - `admissions_engine.py`: University matrices (SIT, Waseda IPS, NAIST, Science Tokyo, Ritsumeikan), deadline calculator, thematic lab matching algorithm, and Japanese academic email drafter.
-    - `paper_reader.py`: Local PDF inspection, metadata extraction, and in-document requirement search via `pypdf`.
-    - `web_intelligence.py`: Zero-key live web search via DuckDuckGo HTML parser and clean markdown scraper.
-    - `code_sandbox.py`: Safe isolated Python REPL runner with execution time tracking and timeout protection.
-    - `workspace_manager.py`: Proposal word-count / section analyzer and research note logger.
-  - Expose 34 verified REST & WebSocket endpoints in `backend/main.py`.
-
-### Milestone 9: Bidirectional Model Context Protocol (MCP) Bridge, CiteX Connector & GitHub Sync
-* **Date:** 6 November 2026
-* **Status:** Complete, Bridged & Deployed to GitHub ✅
-* **Objectives:**
-  - Engineer **MCP Connector** (`backend/mcp_connector.py` & `backend/mcp_servers.json`) enabling Yomi to act as both an MCP server host and an MCP client.
-  - Bridge Nirmiti's **CiteX** autonomous research engine (`http://127.0.0.1:8000`), enabling cross-app literature reviews (OpenAlex, Zenodo, ArXiv) and automatic IEEE LaTeX / PDF compilation directly from Yomi.
-  - Cleanly decommission legacy Next.js/Prisma prototype from [`github.com/Tamore/YomiOS`](https://github.com/Tamore/YomiOS).
-  - Deploy complete Yomi OS 2.0 monorepo (Bklit UI, backend tools, MCP connector, official Bklit Agent Skills) to GitHub `main` branch (Commit `8a31cf9`).
+### Milestone 5: Executive Frontend UI & Design System
+* **Status:** Complete & Verified
+* Authentic Bklit UI implementation with `--chart-1` through `--chart-5` OKLCH tokens, hairline frames (`.bklit-frame`), and squircle grids.
+* Minimized, non-intrusive bottom-docked controller for SQLite task management.
+* Honest data states: metrics display "Not measured" or "Not verified" when unrecorded; research satellite displays distinct loading, empty, and failure states.
+* Real-time task synchronization: chat task additions immediately refresh the active task list.
 
 ---
 
-## 🎓 Master's Thesis Proposal Alignment (Japan AY2027)
+## 5. Verified Limitations & Operating Prerequisites
 
-When presenting Yomi OS to prospective Japanese university admission committees and professors, this platform will be positioned as:
-
-1. **Experimental Testbed:** A fully functional, production-instrumented testbed for **"Self-Adaptive Multi-Agent Coordination and Runtime Fault Tolerance in Decentralized Computing"**.
-2. **Empirical Evidence:** Proves the applicant does not merely conceptualize distributed systems, but designs, deploys, benchmarks, and optimizes them from hardware telemetry up to autonomous agentic lifecycles.
-3. **Publication Pipeline:** Provides the empirical data, latency measurements, and state synchronization logs required to author academic preprints and conference papers (e.g., IEEE/ACM ASE, SAS, or DAIS).
-
----
-*Maintained continuously as Yomi OS evolves.*
+1. **Local LLM Dependencies:** Local inference requires Ollama running at `http://127.0.0.1:11434` with `qwen2.5:7b` (or preferred model). If Ollama is offline and cloud API keys are not supplied, conversational chat gracefully falls back to deterministic executive routing.
+2. **CiteX Integration:** CiteX literature radar runs as an independent service on port 8000; when inactive, the connection badge honestly reports `Offline (:8000)`.
+3. **Google Workspace:** In default out-of-the-box mode, Gmail operates via direct 1-click web compose links, and Drive operations stage files locally to `Google_Drive_Sync/`. Native API mode activates only when OAuth `credentials.json` is configured.
+4. **Developer Code Runner:** Arbitrary code execution is gated behind `YOMI_ENABLE_DEV_RUNNER=true` in `.env`. Leave disabled in untrusted environments.

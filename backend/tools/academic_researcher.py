@@ -1,6 +1,9 @@
 import os
 import re
 import xml.etree.ElementTree as ET
+import html
+import uuid
+import time
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 import httpx
@@ -8,8 +11,23 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 
-EXPORTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "exports"))
+# Register Japanese Unicode CIDFont for Japanese, Greek, math, and scientific symbol rendering
+FONT_HEADING = 'Helvetica-Bold'
+FONT_BODY = 'Helvetica'
+FONT_CODE = 'Courier'
+
+try:
+    pdfmetrics.registerFont(UnicodeCIDFont('HeiseiKakuGo-W5'))
+    pdfmetrics.registerFont(UnicodeCIDFont('HeiseiMin-W3'))
+    FONT_HEADING = 'HeiseiKakuGo-W5'
+    FONT_BODY = 'HeiseiMin-W3'
+except Exception:
+    pass
+
+from config import EXPORTS_DIR
 os.makedirs(EXPORTS_DIR, exist_ok=True)
 
 ARXIV_API_URL = "https://export.arxiv.org/api/query"
@@ -154,9 +172,14 @@ def generate_bibtex(paper: Dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 def generate_research_brief_pdf(paper: Dict[str, Any]) -> str:
-    """Compiles an executive academic research brief in clean monochrome format."""
-    safe_title = re.sub(r'[^a-zA-Z0-9_\-]', '_', paper.get("title", "Research_Paper"))[:50]
-    filename = f"{safe_title}_Research_Brief.pdf"
+    """Compiles an executive academic research brief with honest provenance and escaped metadata."""
+    raw_title = paper.get("title", "Research_Paper")
+    clean_title = re.sub(r'[^a-zA-Z0-9_\-]', '_', raw_title)
+    clean_title = re.sub(r'_+', '_', clean_title).strip('_')[:35]
+    if not clean_title:
+        clean_title = "Research_Paper"
+    unique_suffix = f"{int(time.time())}_{uuid.uuid4().hex[:6]}"
+    filename = f"{clean_title}_{unique_suffix}_Brief.pdf"
     pdf_path = os.path.join(EXPORTS_DIR, filename)
 
     doc = SimpleDocTemplate(
@@ -173,9 +196,9 @@ def generate_research_brief_pdf(paper: Dict[str, Any]) -> str:
     title_style = ParagraphStyle(
         'DocTitle',
         parent=styles['Heading1'],
-        fontName='Helvetica-Bold',
-        fontSize=18,
-        leading=22,
+        fontName=FONT_HEADING,
+        fontSize=16,
+        leading=20,
         textColor=colors.HexColor('#0a0c10'),
         spaceAfter=6
     )
@@ -183,7 +206,7 @@ def generate_research_brief_pdf(paper: Dict[str, Any]) -> str:
     meta_style = ParagraphStyle(
         'MetaStyle',
         parent=styles['Normal'],
-        fontName='Helvetica-Bold',
+        fontName=FONT_BODY,
         fontSize=8.5,
         leading=12,
         textColor=colors.HexColor('#555a64'),
@@ -193,9 +216,9 @@ def generate_research_brief_pdf(paper: Dict[str, Any]) -> str:
     section_header = ParagraphStyle(
         'SectionHeader',
         parent=styles['Heading2'],
-        fontName='Helvetica-Bold',
-        fontSize=11,
-        leading=15,
+        fontName=FONT_HEADING,
+        fontSize=10.5,
+        leading=14,
         textColor=colors.HexColor('#16181d'),
         spaceBefore=10,
         spaceAfter=4
@@ -204,9 +227,9 @@ def generate_research_brief_pdf(paper: Dict[str, Any]) -> str:
     body_style = ParagraphStyle(
         'BodyDark',
         parent=styles['Normal'],
-        fontName='Helvetica',
-        fontSize=9.5,
-        leading=14.5,
+        fontName=FONT_BODY,
+        fontSize=9,
+        leading=13.5,
         textColor=colors.HexColor('#22262e'),
         spaceAfter=8
     )
@@ -214,18 +237,19 @@ def generate_research_brief_pdf(paper: Dict[str, Any]) -> str:
     code_style = ParagraphStyle(
         'CodeStyle',
         parent=styles['Normal'],
-        fontName='Courier',
-        fontSize=8,
-        leading=11,
+        fontName=FONT_CODE,
+        fontSize=7.5,
+        leading=10,
         textColor=colors.HexColor('#111317')
     )
 
     elements = []
 
-    # Header Badge
+    # Header Badge with real timezone
+    now_str = datetime.now().astimezone().strftime('%Y-%m-%d %H:%M %Z')
     badge_data = [[
-        Paragraph("<font color='#666666'>YOMI OS // ACADEMIC RESEARCH SATELLITE</font>", styles['Normal']),
-        Paragraph(f"<font color='#666666'>{datetime.now().strftime('%Y-%m-%d %H:%M')}</font>", styles['Normal'])
+        Paragraph("<font color='#666666'><b>YOMI OS</b> // ACADEMIC RESEARCH BRIEF</font>", styles['Normal']),
+        Paragraph(f"<font color='#666666'>{now_str}</font>", styles['Normal'])
     ]]
     badge_table = Table(badge_data, colWidths=[360, 160])
     badge_table.setStyle(TableStyle([
@@ -237,8 +261,9 @@ def generate_research_brief_pdf(paper: Dict[str, Any]) -> str:
     elements.append(Spacer(1, 8))
     elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#000000'), spaceBefore=2, spaceAfter=10))
 
-    # Paper Title
-    elements.append(Paragraph(paper.get("title", "Academic Literature Synthesis"), title_style))
+    # Paper Title (properly HTML-escaped)
+    raw_title = paper.get("title", "Academic Literature Synthesis")
+    elements.append(Paragraph(html.escape(raw_title), title_style))
     
     # Metadata
     authors_list = paper.get("authors", [])
@@ -250,35 +275,35 @@ def generate_research_brief_pdf(paper: Dict[str, Any]) -> str:
         authors_str = "Unknown"
 
     meta_text = (
-        f"<b>Authors:</b> {authors_str} &nbsp;|&nbsp; "
-        f"<b>Published:</b> {paper.get('published', 'N/A')} &nbsp;|&nbsp; "
-        f"<b>Source:</b> {paper.get('source')} ({paper.get('id')})"
+        f"<b>Authors:</b> {html.escape(authors_str)} &nbsp;|&nbsp; "
+        f"<b>Published:</b> {html.escape(str(paper.get('published', 'N/A')))} &nbsp;|&nbsp; "
+        f"<b>Source:</b> {html.escape(str(paper.get('source', 'arXiv')))} ({html.escape(str(paper.get('id', 'N/A')))})"
     )
     elements.append(Paragraph(meta_text, meta_style))
     elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#cccccc'), spaceBefore=0, spaceAfter=10))
 
-    # Abstract / Core Contribution
-    elements.append(Paragraph("1. EXECUTIVE ABSTRACT & METHODOLOGY", section_header))
+    # Abstract Section
+    elements.append(Paragraph("1. EXTRACTED ABSTRACT & REPOSITORY METADATA", section_header))
     abstract_text = paper.get("abstract", "No abstract available.")[:2200]
-    elements.append(Paragraph(abstract_text, body_style))
+    elements.append(Paragraph(html.escape(abstract_text), body_style))
     elements.append(Spacer(1, 6))
 
-    # Strategic Relevance to Master's Thesis
-    elements.append(Paragraph("2. STRATEGIC RELEVANCE & RESEARCH SYNERGY", section_header))
-    relevance_points = [
-        "<b>Distributed Execution & Adaptation:</b> Relates directly to asynchronous task scheduling, plan adaptation, and latency minimization.",
-        "<b>Empirical Evaluation Pattern:</b> Methodology can be adapted to benchmark Yomi OS sub-agent coordination and fault recovery.",
-        "<b>Literature Provenance:</b> Essential citation for AY2027 Master's Thesis proposals in Japan (Software Engineering & Dependable Distributed Systems)."
+    # Honest Provenance & Scope Notice
+    elements.append(Paragraph("2. PROVENANCE & SYNTHESIS SCOPE", section_header))
+    scope_points = [
+        f"<b>Repository Link:</b> {html.escape(str(paper.get('url', 'N/A')))}",
+        f"<b>PDF Download Target:</b> {html.escape(str(paper.get('pdf_url', 'N/A')))}",
+        "<b>Analysis Boundary:</b> This brief captures published repository abstract and citation metadata. Full-text deep synthesis and experimental reproduction require document ingestion via local PDF reader or configured model worker."
     ]
-    for pt in relevance_points:
+    for pt in scope_points:
         elements.append(Paragraph(f"• {pt}", body_style))
     elements.append(Spacer(1, 6))
 
     # BibTeX Citation
     elements.append(Paragraph("3. BIBTEX CITATION ENTRY", section_header))
     bibtex_str = generate_bibtex(paper)
-    # Format for PDF
-    bibtex_p = Paragraph(bibtex_str.replace('\n', '<br/>').replace(' ', '&nbsp;'), code_style)
+    bibtex_escaped = html.escape(bibtex_str).replace('\n', '<br/>').replace(' ', '&nbsp;')
+    bibtex_p = Paragraph(bibtex_escaped, code_style)
     bibtex_table = Table([[bibtex_p]], colWidths=[520])
     bibtex_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f5f6f8')),
@@ -290,7 +315,7 @@ def generate_research_brief_pdf(paper: Dict[str, Any]) -> str:
 
     # Footer
     elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#cccccc'), spaceBefore=8, spaceAfter=6))
-    footer_text = f"<font color='#888888'>Paper Link: {paper.get('url')} | PDF Source: {paper.get('pdf_url')} | Yomi OS Research Engine</font>"
+    footer_text = f"<font color='#888888'>Source: {html.escape(str(paper.get('source', 'arXiv')))} | Verified Reference Brief</font>"
     elements.append(Paragraph(footer_text, meta_style))
 
     doc.build(elements)

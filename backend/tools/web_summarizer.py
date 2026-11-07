@@ -2,13 +2,38 @@ import httpx
 from bs4 import BeautifulSoup
 import re
 import os
+import sys
+import html
+import uuid
+import time
 from datetime import datetime
+from pathlib import Path
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 
-EXPORTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "exports"))
+# Register Japanese Unicode CIDFont for Japanese, Greek, math, and symbol rendering
+FONT_HEADING = 'Helvetica-Bold'
+FONT_BODY = 'Helvetica'
+FONT_CODE = 'Courier'
+
+try:
+    pdfmetrics.registerFont(UnicodeCIDFont('HeiseiKakuGo-W5'))
+    pdfmetrics.registerFont(UnicodeCIDFont('HeiseiMin-W3'))
+    FONT_HEADING = 'HeiseiKakuGo-W5'
+    FONT_BODY = 'HeiseiMin-W3'
+except Exception:
+    pass
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+from config import safe_http_get, validate_safe_url
+
+from config import EXPORTS_DIR
 
 async def fetch_webpage_content(url: str) -> dict:
     headers = {
@@ -18,13 +43,12 @@ async def fetch_webpage_content(url: str) -> dict:
     
     if not url.startswith("http://") and not url.startswith("https://"):
         url = "https://" + url
-        
-    async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
-        response = await client.get(url, headers=headers)
-        response.raise_for_status()
-        html = response.text
 
-    soup = BeautifulSoup(html, "html.parser")
+    response = await safe_http_get(url, timeout=15.0, headers=headers)
+    response.raise_for_status()
+    page_html = response.text
+
+    soup = BeautifulSoup(page_html, "html.parser")
     
     # Strip script, style, nav, footer, ads
     for tag in soup(["script", "style", "nav", "footer", "header", "aside", "noscript", "svg"]):
@@ -34,11 +58,11 @@ async def fetch_webpage_content(url: str) -> dict:
     title = soup.title.string.strip() if soup.title and soup.title.string else "Web_Document"
     title = re.sub(r'[\/\\:*?"<>|]', '_', title)[:60].strip()
     
-    # Extract main text
+    # Extract main text without double-counting nested articles
     paragraphs = []
-    for p in soup.find_all(['p', 'h1', 'h2', 'h3', 'article']):
+    for p in soup.find_all(['h1', 'h2', 'h3', 'p']):
         text = p.get_text(separator=' ', strip=True)
-        if len(text) > 35:
+        if len(text) > 35 and text not in paragraphs:
             paragraphs.append(text)
             
     full_text = "\n\n".join(paragraphs[:30]) # cap to prevent overflow
@@ -50,7 +74,11 @@ async def fetch_webpage_content(url: str) -> dict:
 
 def generate_pdf_summary(title: str, url: str, summary_text: str, key_takeaways: list) -> str:
     clean_title = re.sub(r'[^a-zA-Z0-9_\-]', '_', title)
-    filename = f"{clean_title}_Summary.pdf"
+    clean_title = re.sub(r'_+', '_', clean_title).strip('_')[:35]
+    if not clean_title:
+        clean_title = "Web_Document"
+    unique_suffix = f"{int(time.time())}_{uuid.uuid4().hex[:6]}"
+    filename = f"{clean_title}_{unique_suffix}_Summary.pdf"
     pdf_path = os.path.join(EXPORTS_DIR, filename)
     
     doc = SimpleDocTemplate(
@@ -68,7 +96,7 @@ def generate_pdf_summary(title: str, url: str, summary_text: str, key_takeaways:
     title_style = ParagraphStyle(
         'DocTitle',
         parent=styles['Heading1'],
-        fontName='Helvetica-Bold',
+        fontName=FONT_HEADING,
         fontSize=20,
         leading=24,
         textColor=colors.HexColor('#111317'),
@@ -78,7 +106,7 @@ def generate_pdf_summary(title: str, url: str, summary_text: str, key_takeaways:
     meta_style = ParagraphStyle(
         'MetaStyle',
         parent=styles['Normal'],
-        fontName='Helvetica',
+        fontName=FONT_BODY,
         fontSize=9,
         leading=12,
         textColor=colors.HexColor('#667085'),
@@ -88,7 +116,7 @@ def generate_pdf_summary(title: str, url: str, summary_text: str, key_takeaways:
     heading_style = ParagraphStyle(
         'SectionHeading',
         parent=styles['Heading2'],
-        fontName='Helvetica-Bold',
+        fontName=FONT_HEADING,
         fontSize=12,
         leading=16,
         textColor=colors.HexColor('#1d2939'),
@@ -99,7 +127,7 @@ def generate_pdf_summary(title: str, url: str, summary_text: str, key_takeaways:
     body_style = ParagraphStyle(
         'BodyDark',
         parent=styles['Normal'],
-        fontName='Helvetica',
+        fontName=FONT_BODY,
         fontSize=10,
         leading=15,
         textColor=colors.HexColor('#344054'),
@@ -109,7 +137,7 @@ def generate_pdf_summary(title: str, url: str, summary_text: str, key_takeaways:
     bullet_style = ParagraphStyle(
         'BulletStyle',
         parent=styles['Normal'],
-        fontName='Helvetica',
+        fontName=FONT_BODY,
         fontSize=10,
         leading=15,
         textColor=colors.HexColor('#1d2939'),
@@ -119,27 +147,28 @@ def generate_pdf_summary(title: str, url: str, summary_text: str, key_takeaways:
 
     story = []
     
-    # Header
-    story.append(Paragraph(f"<b>{title}</b>", title_style))
-    story.append(Paragraph(f"Source: {url} &nbsp;·&nbsp; Captured: {datetime.now().strftime('%Y-%m-%d %H:%M:%S JST')} &nbsp;·&nbsp; Yomi Intelligence Engine", meta_style))
+    # Header with real timezone
+    now_str = datetime.now().astimezone().strftime('%Y-%m-%d %H:%M %Z')
+    story.append(Paragraph(f"<b>{html.escape(title)}</b>", title_style))
+    story.append(Paragraph(f"Source: {html.escape(url)} &nbsp;·&nbsp; Captured: {now_str} &nbsp;·&nbsp; Yomi Intelligence Engine", meta_style))
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#e4e7ec'), spaceAfter=15))
     
     # Key Takeaways Section
-    story.append(Paragraph("EXECUTIVE SUMMARY & KEY TAKEAWAYS", heading_style))
+    story.append(Paragraph("KEY PASSAGES & EXTRACTED BULLETS", heading_style))
     for point in key_takeaways:
-        story.append(Paragraph(f"• &nbsp; {point}", bullet_style))
+        story.append(Paragraph(f"• &nbsp; {html.escape(point)}", bullet_style))
     
     story.append(Spacer(1, 10))
     story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#eaecf0'), spaceAfter=12))
     
     # Detailed Analysis Section
-    story.append(Paragraph("DETAILED SYNTHESIS & INSIGHTS", heading_style))
+    story.append(Paragraph("CAPTURED WEB EXCERPTS", heading_style))
     
     # Break summary text into clean paragraphs
     for para in summary_text.split("\n\n"):
         clean_para = para.strip()
         if clean_para:
-            story.append(Paragraph(clean_para, body_style))
+            story.append(Paragraph(html.escape(clean_para), body_style))
             
     doc.build(story)
     return pdf_path
@@ -149,25 +178,26 @@ async def summarize_and_export_pdf(url: str) -> dict:
     title = web_data["title"]
     content = web_data["content"]
     
-    # Structured synthesis
-    takeaways = [
-        f"Primary focus extracted from {url}",
-        "Core thesis and architectural specifications analyzed.",
-        "Key actionable intelligence summarized for quick executive review."
-    ]
-    
-    if len(content) > 100:
-        sentences = [s.strip() for s in content.split(".") if len(s.strip()) > 30]
-        if len(sentences) >= 3:
-            takeaways = [sentences[0] + ".", sentences[1] + ".", sentences[2] + "."]
+    if not content or len(content.strip()) < 50:
+        return {
+            "success": False,
+            "error": "No extractable body text found on webpage. The target site may be dynamic (SPA), require cookies/login, or block scrapers.",
+            "url": url,
+            "title": title
+        }
+
+    # Structured sentence extraction
+    sentences = [s.strip() for s in content.split(".") if len(s.strip()) > 30]
+    if len(sentences) >= 3:
+        takeaways = [sentences[0] + ".", sentences[1] + ".", sentences[2] + "."]
+    else:
+        takeaways = [f"Captured direct text excerpt from {url}."]
             
-    summary_body = content[:1500] if len(content) > 1500 else content
-    if not summary_body:
-        summary_body = "The target webpage was loaded. Content was extracted and archived by Yomi Web Intelligence."
-        
+    summary_body = content[:2000] if len(content) > 2000 else content
     pdf_path = generate_pdf_summary(title, url, summary_body, takeaways)
     
     return {
+        "success": True,
         "title": title,
         "url": url,
         "takeaways": takeaways,

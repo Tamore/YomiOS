@@ -53,6 +53,14 @@ class MCPConnector:
                         "url": url,
                         "data": res.json()
                     }
+                else:
+                    return {
+                        "online": False,
+                        "server_id": server_id,
+                        "name": srv.get("name"),
+                        "url": url,
+                        "error": f"HTTP {res.status_code}"
+                    }
         except Exception as e:
             return {
                 "online": False,

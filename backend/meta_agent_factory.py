@@ -81,13 +81,12 @@ async def execute_subagent(agent_id: str, custom_input: Optional[str] = None) ->
     start_time = datetime.now()
     tools = agent.get("tools_bound", [])
     output_parts = []
+    has_failure = False
     
     try:
         # 1. Execute Academic Research tool if bound
         if "academic_researcher" in tools:
-            # Extract topic from prompt or custom input
             query = custom_input or agent["prompt_template"]
-            # Clean up command prefix if present
             clean_query = re.sub(r'(?:monitor|search|research|papers on|find)\s*', '', query, flags=re.IGNORECASE).strip()
             if not clean_query:
                 clean_query = "self-adaptive distributed systems"
@@ -96,7 +95,8 @@ async def execute_subagent(agent_id: str, custom_input: Optional[str] = None) ->
                 top_p = res.get("paper", {})
                 output_parts.append(f"Retrieved: '{top_p.get('title')}' ({top_p.get('year')}). PDF Brief: {res.get('pdf_filename')}")
             else:
-                output_parts.append(f"Research query yielded: {res.get('message')}")
+                has_failure = True
+                output_parts.append(f"Research failed: {res.get('message') or res.get('error') or 'No papers found'}")
 
         # 2. Execute Web Summarizer tool if bound
         if "web_summarizer" in tools:
@@ -104,9 +104,14 @@ async def execute_subagent(agent_id: str, custom_input: Optional[str] = None) ->
             if url_match:
                 target_url = url_match.group(1)
                 res = await summarize_and_export_pdf(target_url)
-                output_parts.append(f"Summarized {target_url} into {res.get('filename')}")
+                if res.get("success"):
+                    output_parts.append(f"Summarized {target_url} into {res.get('filename')}")
+                else:
+                    has_failure = True
+                    output_parts.append(f"Summarizer failed: {res.get('error', 'Unknown extraction error')}")
             else:
-                output_parts.append("Web summarizer bound, awaiting target URL.")
+                has_failure = True
+                output_parts.append("Web summarizer bound, but no target URL specified.")
 
         # 3. Execute OS Control if bound
         if "os_control" in tools:
@@ -117,14 +122,15 @@ async def execute_subagent(agent_id: str, custom_input: Optional[str] = None) ->
         elapsed_sec = (datetime.now() - start_time).total_seconds()
         final_output = f"[{datetime.now().strftime('%H:%M:%S')}] {execution_summary} (Latency: {elapsed_sec:.2f}s)"
         
-        db.update_subagent_status(agent_id, "IDLE", final_output)
-        db.add_log(f"Sub-Agent '{agent['name']}' Executed", final_output, "AGENT", "play")
+        final_status = "FAILED" if has_failure else "IDLE"
+        db.update_subagent_status(agent_id, final_status, final_output)
+        db.add_log(f"Sub-Agent '{agent['name']}' {'Failed' if has_failure else 'Executed'}", final_output, "AGENT", "alert-triangle" if has_failure else "play")
         
         return {
-            "success": True,
+            "success": not has_failure,
             "agent_id": agent_id,
             "agent_name": agent["name"],
-            "status": "IDLE",
+            "status": final_status,
             "output": final_output,
             "latency_seconds": elapsed_sec
         }
