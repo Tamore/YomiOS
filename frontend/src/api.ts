@@ -119,4 +119,20 @@ export async function fetchChatHistory(sessionId: string = "default"): Promise<S
   }
 }
 
+export async function synthesizeVoice(message: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message })
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.audio_url || null;
+  } catch {
+    return null;
+  }
+}
+
+
 
