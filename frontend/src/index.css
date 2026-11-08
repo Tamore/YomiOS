@@ -381,11 +381,24 @@ html, body {
 
 .dashboard-header .dashboard-nav { margin-inline: auto; }
 .chat-row > :last-child { max-width: min(85%, 65ch); min-width: 0; overflow-wrap: anywhere; }
-.dashboard-drawer { position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 50; }
+.dashboard-drawer { position: fixed; right: 0; z-index: 50; }
 .drawer-handle { display: grid; place-items: center; width: 22px; height: 52px; background: #26232b; border: 1px solid #ffffff26; border-right: 0; border-radius: 12px 0 0 12px; color: #ffc3d7; cursor: pointer; }
 .dashboard-drawer > .bklit-frame { max-width: calc(100vw - 16px); max-height: min(500px, 90dvh); margin-right: 6px; }
 .dashboard-drawer .bklit-frame-panel { min-height: 0; }
 @media (prefers-reduced-motion: no-preference) {
   .dashboard-drawer > .bklit-frame { animation: drawer-open 180ms ease-out; }
-  @keyframes drawer-open { from { translate: 100% 0; } }
+  @keyframes drawer-open { from { translate: var(--drawer-start,100%) 0; } }
+}
+
+.dashboard-drawer[data-left="true"] { right: auto; left: 0; --drawer-start: -100%; }
+.drawer-handle { touch-action: none; user-select: none; cursor: grab; }
+.drawer-handle:active { cursor: grabbing; }
+.dashboard-drawer[data-left="true"] .drawer-handle { transform: rotate(180deg); }
+.dashboard-drawer[data-left="true"] > .bklit-frame { margin-inline: 6px 0; }
+:is(.dashboard-drawer,.voice-tracker) > .bklit-frame {
+  padding: 0; overflow: hidden; border-radius: 20px; border: 1px solid #ffc3d740;
+  background: linear-gradient(150deg,#25212b,#151419 70%); box-shadow: 0 12px 40px #0008;
+}
+:is(.dashboard-drawer,.voice-tracker) > .bklit-frame > .bklit-frame-panel {
+  padding: 0; border: 0; background: transparent; min-height: 0;
 }

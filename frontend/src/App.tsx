@@ -37,6 +37,29 @@ export default function App() {
   // Sticky Floating Window starts MINIMIZED by default so it never blocks the view
   const [home, setHome] = useState(true);
   const [isWindowOpen, setIsWindowOpen] = useState(false);
+  const drawer = useRef<HTMLDivElement>(null);
+  const drag = useRef({x: 0, y: 0, moved: false});
+  const [dock, setDock] = useState(() => {
+    try {
+      const value = JSON.parse(localStorage.getItem('yomi.drawer') || 'null');
+      if (value && typeof value.left === 'boolean' && Number.isFinite(value.y))
+        return {left: Boolean(value.left), y: Math.max(0, Math.min(1, value.y))};
+    } catch { /* Optional local preference. */ }
+    return {left: false, y: 0.5};
+  });
+  useEffect(() => {
+    if (!isWindowOpen) return;
+    function outside(e: PointerEvent) {
+      if (e.target instanceof Element && !drawer.current?.contains(e.target) && !e.target.closest('[data-pipeline-toggle]')) setIsWindowOpen(false);
+    }
+    function escape(e: KeyboardEvent) { if (e.key === 'Escape') setIsWindowOpen(false); }
+    document.addEventListener('pointerdown', outside, true);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', outside, true);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [isWindowOpen]);
   const [stickyTab, setStickyTab] = useState<'pipeline' | 'actions'>('pipeline');
 
   // Real SQLite Tasks from Backend API (Empty initial state)
@@ -1132,10 +1155,29 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* 3. MINIMIZABLE / MAXIMIZABLE DOCKED CONTROLLER                */}
       {/* ------------------------------------------------------------- */}
-      <div hidden={home && !isWindowOpen} className={home ? "voice-tracker" : "dashboard-drawer"}>
+      <div ref={drawer} data-left={dock.left}
+        style={home ? undefined : {top: `clamp(0px, calc(${dock.y * 100}dvh - 26px), calc(100dvh - ${isWindowOpen ? 'min(500px, 90dvh)' : '52px'}))`}}
+        hidden={home && !isWindowOpen} className={home ? "voice-tracker" : "dashboard-drawer"}>
         {!isWindowOpen ? (
-          <button type="button" className="drawer-handle" onClick={() => setIsWindowOpen(true)}
-              aria-label="Open pipeline and actions" title="Open pipeline and actions">
+          <button type="button" className="drawer-handle"
+            onPointerDown={e => {
+              if (!e.isPrimary || e.button !== 0) return;
+              drag.current = {x:e.clientX, y:e.clientY, moved:false};
+              e.currentTarget.setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={e => {
+              if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+              if (Math.hypot(e.clientX-drag.current.x,e.clientY-drag.current.y)>5) drag.current.moved = true;
+              if (drag.current.moved) setDock({left:e.clientX < innerWidth/2, y:Math.max(0,Math.min(1,e.clientY/innerHeight))});
+            }}
+            onPointerUp={() => {
+              if (drag.current.moved) {
+                try { localStorage.setItem('yomi.drawer', JSON.stringify(dock)); } catch { /* Optional preference. */ }
+              }
+            }}
+            onClick={e => { if (!drag.current.moved || e.detail === 0) setIsWindowOpen(true); }}
+            
+              aria-label="Open pipeline and actions" title="Click to open. Drag to move along either edge.">
               <ChevronLeft size={15} aria-hidden="true" />
             </button>
         ) : (
