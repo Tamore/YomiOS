@@ -391,8 +391,8 @@ body {
 .chat-row > :last-child { max-width: min(85%, 65ch); min-width: 0; overflow-wrap: anywhere; }
 .dashboard-drawer { position: fixed; right: 0; z-index: 50; }
 .drawer-handle { display: grid; place-items: center; width: 22px; height: 52px; background: #26232b; border: 1px solid #ffffff26; border-right: 0; border-radius: 12px 0 0 12px; color: #ffc3d7; cursor: pointer; }
-.dashboard-drawer > .bklit-frame { max-width: calc(100vw - 16px); max-height: min(500px, 90dvh); margin-right: 6px; }
-.dashboard-drawer .bklit-frame-panel { min-height: 0; }
+.dashboard-drawer > .bklit-frame { max-width: calc(100vw - 16px); max-height: inherit; margin-right: 6px; }
+.dashboard-drawer .bklit-frame-panel { min-height: 0; max-height: min(500px, 90dvh); }
 @media (prefers-reduced-motion: no-preference) {
   .dashboard-drawer > .bklit-frame { animation: drawer-open 180ms ease-out; }
   @keyframes drawer-open { from { translate: var(--drawer-start,100%) 0; } }

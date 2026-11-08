@@ -1156,7 +1156,16 @@ export default function App() {
       {/* 3. MINIMIZABLE / MAXIMIZABLE DOCKED CONTROLLER                */}
       {/* ------------------------------------------------------------- */}
       <div ref={drawer} data-left={dock.left}
-        style={home ? undefined : {top: `clamp(0px, calc(${dock.y * 100}dvh - 26px), calc(100dvh - ${isWindowOpen ? 'min(500px, 90dvh)' : '52px'}))`}}
+        style={home ? undefined : {
+          top: `clamp(0px, calc(${dock.y * 100}dvh - 26px), calc(100dvh - 52px))`,
+          ...(isWindowOpen && dock.y > 0.5 ? {
+            top: 'auto',
+            bottom: `clamp(0px, calc(${(1 - dock.y) * 100}dvh - 26px), calc(100dvh - 52px))`,
+            maxHeight: `min(100dvh, calc(${dock.y * 100}dvh + 26px))`,
+          } : isWindowOpen ? {
+            maxHeight: `min(100dvh, calc(${(1 - dock.y) * 100}dvh + 26px))`,
+          } : {}),
+        }}
         hidden={home && !isWindowOpen} className={home ? "voice-tracker" : "dashboard-drawer"}>
         {!isWindowOpen ? (
           <button type="button" className="drawer-handle"
