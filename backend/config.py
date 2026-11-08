@@ -64,18 +64,10 @@ def validate_workspace_path(target_path: str, base_dir: Optional[Path] = None) -
     else:
         resolved_target = (resolved_base / target_p).resolve()
 
-    # Case-insensitive resolution check on Windows, standard on POSIX
     try:
         resolved_target.relative_to(resolved_base)
-    except ValueError:
-        # Additional check on Windows for drive letter mismatches or case differences
-        base_str = str(resolved_base).lower().rstrip("\\/") + os.sep
-        target_str = str(resolved_target).lower()
-        if not target_str.startswith(base_str) and target_str != str(resolved_base).lower():
-            raise PermissionError(
-                f"Access denied: path '{clean_str}' resolves to '{resolved_target}', "
-                f"which is outside designated workspace root '{resolved_base}'."
-            )
+    except ValueError as exc:
+        raise PermissionError(f"Path is outside the workspace: {resolved_target}") from exc
 
     return resolved_target
 
@@ -106,61 +98,31 @@ def validate_safe_url(url: str) -> bool:
     private, loopback, link-local, multicast, or cloud metadata addresses (SSRF prevention).
     Performs full DNS resolution and checks every resolved IPv4 and IPv6 address.
     """
-    if not url or not isinstance(url, str):
-        return False
-
-    clean_url = url.strip()
-    parsed = urlparse(clean_url)
-
-    if parsed.scheme.lower() not in ("http", "https"):
-        return False
-
-    hostname = parsed.hostname
-    if not hostname:
-        return False
-
-    hostname_clean = hostname.strip().rstrip(".").lower()
-
-    # Reject obvious local hostnames
-    if hostname_clean in ("localhost", "loopback", "127.0.0.1", "0.0.0.0", "::1", "::"):
-        return False
-    if hostname_clean.endswith(".localhost") or hostname_clean.endswith(".local"):
-        return False
-
-    # Check port if explicitly specified
-    port = parsed.port
-    if port and port in (8765, 5173, 11434, 8000, 22, 25):
-        # Reject internal application and privileged service ports
-        return False
-
-    # Check if hostname is directly an IP address literal
     try:
-        raw_ip = ipaddress.ip_address(hostname_clean)
-        return _is_ip_strictly_public(raw_ip)
-    except ValueError:
-        pass
-
-    # Resolve hostname via DNS to verify all destination IPs
-    try:
-        addr_info = socket.getaddrinfo(hostname_clean, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
-    except (socket.gaierror, socket.herror, OSError):
-        # If hostname cannot be resolved, reject
+        _public_address(httpx.URL(url))
+    except (ValueError, TypeError, httpx.InvalidURL):
         return False
-
-    if not addr_info:
-        return False
-
-    for item in addr_info:
-        sockaddr = item[4]
-        ip_str = sockaddr[0]
-        try:
-            resolved_ip = ipaddress.ip_address(ip_str)
-            if not _is_ip_strictly_public(resolved_ip):
-                return False
-        except ValueError:
-            return False
-
     return True
+
+
+def _public_address(url: httpx.URL) -> str:
+    hostname = url.raw_host.decode("ascii").rstrip(".").lower()
+    if (url.scheme not in ("http", "https") or not hostname
+            or hostname in ("localhost", "loopback")
+            or hostname.endswith((".localhost", ".local"))
+            or url.port in (8765, 5173, 11434, 8000, 22, 25)):
+        raise ValueError("Blocked web destination")
+    try:
+        addresses = [ipaddress.ip_address(hostname)]
+    except ValueError:
+        try:
+            records = socket.getaddrinfo(hostname, url.port, type=socket.SOCK_STREAM)
+        except OSError as exc:
+            raise ValueError("Could not resolve web destination") from exc
+        addresses = [ipaddress.ip_address(record[4][0]) for record in records]
+    if not addresses or not all(_is_ip_strictly_public(addr) for addr in addresses):
+        raise ValueError("Blocked non-public web destination")
+    return str(addresses[0])
 
 
 def _is_ip_strictly_public(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
@@ -208,28 +170,26 @@ async def safe_http_get(
     Performs an HTTP GET request with SSRF validation on the initial URL
     and on EVERY redirect hop.
     """
-    if not validate_safe_url(url):
-        raise ValueError(f"Blocked URL: '{url}' is not a permitted public web target.")
-
-    current_url = url
+    current_url = httpx.URL(url)
     client_headers = headers or {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
     }
 
-    async with httpx.AsyncClient(timeout=timeout, follow_redirects=False) as client:
-        for _ in range(max_redirects + 1):
-            response = await client.get(current_url, headers=client_headers)
+    for hop in range(max_redirects + 1):
+        address = _public_address(current_url)
+        # Isolate each authority's TLS connection, even when two hosts share an IP.
+        async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
+            request = client.build_request("GET", current_url, headers=client_headers)
+            request.headers["Host"] = current_url.netloc.decode("ascii")
+            request.url = current_url.copy_with(host=address)
+            request.extensions["sni_hostname"] = current_url.raw_host.decode("ascii")
+            response = await client.send(request)
+        request.url = current_url
+        if not response.is_redirect or not response.headers.get("location"):
+            return response
+        if hop == max_redirects:
+            break
+        current_url = current_url.join(response.headers["location"])
 
-            if response.is_redirect:
-                loc = response.headers.get("Location")
-                if not loc:
-                    break
-                next_url = urljoin(current_url, loc)
-                if not validate_safe_url(next_url):
-                    raise ValueError(f"Blocked redirect: target '{next_url}' resolves to a non-public or prohibited destination.")
-                current_url = next_url
-            else:
-                return response
-
-        raise ValueError(f"Excessive redirects encountered for '{url}' (exceeded {max_redirects} hops).")
+    raise ValueError(f"Exceeded {max_redirects} redirects")

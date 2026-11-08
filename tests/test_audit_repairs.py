@@ -2,7 +2,9 @@ import unittest
 import os
 import sys
 import asyncio
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+import socket
+import httpx
 
 # Setup paths
 BACKEND_DIR = Path(__file__).resolve().parent.parent / "backend"
@@ -89,6 +91,43 @@ class TestYomiAuditRepairs(unittest.TestCase):
         self.assertIsNotNone(res)
         self.assertTrue(res["result"]["isError"])
         self.assertIn("Error: Unknown tool", res["result"]["content"][0]["text"])
+
+    def test_workspace_uses_native_path_comparison(self):
+        # Exercise POSIX case semantics even on a Windows development machine.
+        class ResolvedPosixPath(PurePosixPath):
+            def resolve(self):
+                return self
+
+        with patch.object(config, "Path", ResolvedPosixPath):
+            root = ResolvedPosixPath("/records/Study")
+            self.assertEqual(config.validate_workspace_path("notes", root), root / "notes")
+            with self.assertRaises(PermissionError):
+                config.validate_workspace_path("/records/study/notes", root)
+
+    def test_fetch_pins_each_hop_and_preserves_https_authority(self):
+        seen = []
+        def respond(request):
+            seen.append((request.url.host, request.headers["host"],
+                         request.extensions["sni_hostname"]))
+            if len(seen) == 1:
+                return httpx.Response(302, headers={"location": "https://second.example:8443/report"})
+            return httpx.Response(200, text="ok")
+
+        real_client = httpx.AsyncClient
+        def client(**kwargs):
+            self.assertFalse(kwargs["trust_env"])
+            return real_client(transport=httpx.MockTransport(respond), **kwargs)
+
+        def resolve(host, port, type):
+            address = {"first.example": "1.1.1.1", "second.example": "8.8.8.8"}[host]
+            return [(socket.AF_INET, type, 0, "", (address, port or 443))]
+
+        with patch.object(config.socket, "getaddrinfo", side_effect=resolve) as dns, patch.object(config.httpx, "AsyncClient", side_effect=client):
+            result = asyncio.run(config.safe_http_get("https://first.example/start"))
+        self.assertEqual(dns.call_count, 2)
+        self.assertEqual(seen, [("1.1.1.1", "first.example", "first.example"),
+                                ("8.8.8.8", "second.example:8443", "second.example")])
+        self.assertEqual(str(result.url), "https://second.example:8443/report")
 
     def test_safe_url_validation(self):
         """Verify URL validator blocks private/loopback/cloud metadata targets."""
