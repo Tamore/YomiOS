@@ -1,25 +1,35 @@
 import os
+import sys
 import re
 from typing import Dict, Any, List, Optional
+from pathlib import Path
 import pypdf
+
+# Import security containment
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+from config import validate_workspace_path
 
 class DocumentReader:
     """
     Parses and extracts insights from local research papers, PDFs,
-    admission guidelines, and academic transcripts.
+    admission guidelines, and academic transcripts within the workspace.
     """
     def __init__(self):
         pass
 
     def inspect_pdf(self, file_path: str, max_pages: int = 20) -> Dict[str, Any]:
-        if not os.path.isabs(file_path):
-            file_path = os.path.abspath(file_path)
+        try:
+            safe_file_path = str(validate_workspace_path(file_path))
+        except PermissionError as pe:
+            return {"success": False, "error": str(pe)}
 
-        if not os.path.exists(file_path):
-            return {"success": False, "error": f"File does not exist: {file_path}"}
+        if not os.path.exists(safe_file_path):
+            return {"success": False, "error": f"File does not exist: {safe_file_path}"}
 
         try:
-            reader = pypdf.PdfReader(file_path)
+            reader = pypdf.PdfReader(safe_file_path)
             num_pages = len(reader.pages)
             meta = reader.metadata or {}
 
@@ -46,10 +56,10 @@ class DocumentReader:
 
             return {
                 "success": True,
-                "file_path": file_path,
-                "filename": os.path.basename(file_path),
+                "file_path": safe_file_path,
+                "filename": os.path.basename(safe_file_path),
                 "total_pages": num_pages,
-                "title": meta.get("/Title", os.path.basename(file_path)),
+                "title": meta.get("/Title", os.path.basename(safe_file_path)),
                 "author": meta.get("/Author", "Unknown"),
                 "abstract": abstract[:1500],
                 "pages": extracted_pages,
@@ -59,12 +69,17 @@ class DocumentReader:
             return {"success": False, "error": f"PDF parse error: {str(e)}"}
 
     def search_in_document(self, file_path: str, query: str) -> Dict[str, Any]:
-        """Searches for specific terms or requirements inside a PDF document."""
-        if not os.path.exists(file_path):
-            return {"success": False, "error": f"File not found: {file_path}"}
+        """Searches for specific terms or requirements inside a PDF document within workspace."""
+        try:
+            safe_file_path = str(validate_workspace_path(file_path))
+        except PermissionError as pe:
+            return {"success": False, "error": str(pe)}
+
+        if not os.path.exists(safe_file_path):
+            return {"success": False, "error": f"File not found: {safe_file_path}"}
 
         try:
-            reader = pypdf.PdfReader(file_path)
+            reader = pypdf.PdfReader(safe_file_path)
             results = []
             q_lower = query.lower()
 
@@ -82,7 +97,7 @@ class DocumentReader:
             return {
                 "success": True,
                 "query": query,
-                "filename": os.path.basename(file_path),
+                "filename": os.path.basename(safe_file_path),
                 "occurrences": len(results),
                 "results": results
             }
@@ -90,4 +105,3 @@ class DocumentReader:
             return {"success": False, "error": str(e)}
 
 document_reader = DocumentReader()
-

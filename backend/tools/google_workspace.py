@@ -1,13 +1,20 @@
 import os
+import sys
 import json
 import urllib.parse
 from typing import Dict, Any, List, Optional
+from pathlib import Path
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+from config import validate_workspace_path, validate_safe_subfolder, WORKSPACE_ROOT
 
 # Token and credentials storage paths
-WORKSPACE_CONFIG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "config"))
+WORKSPACE_CONFIG_DIR = WORKSPACE_ROOT / "config"
 TOKEN_FILE = os.path.join(WORKSPACE_CONFIG_DIR, "token.json")
 CREDENTIALS_FILE = os.path.join(WORKSPACE_CONFIG_DIR, "credentials.json")
-LOCAL_DRIVE_STAGING_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "Google_Drive_Sync"))
+LOCAL_DRIVE_STAGING_DIR = WORKSPACE_ROOT / "Google_Drive_Sync"
 
 os.makedirs(WORKSPACE_CONFIG_DIR, exist_ok=True)
 os.makedirs(LOCAL_DRIVE_STAGING_DIR, exist_ok=True)
@@ -122,28 +129,37 @@ class GoogleWorkspaceBridge:
     # -------------------------------------------------------------
     def stage_file_to_drive(self, source_path: str, destination_subfolder: str = "Research_Briefs") -> Dict[str, Any]:
         """
-        Stages a local file (e.g. an exported research PDF brief or proposal)
-        into Google Drive sync storage so it is immediately uploaded by Google Drive for Desktop
-        or native API.
+        Stages a local file strictly from within the workspace into Google Drive sync storage.
+        Validates that source path cannot escape workspace and destination subfolder cannot traverse outside staging.
         """
-        if not os.path.exists(source_path):
+        try:
+            safe_source = validate_workspace_path(source_path)
+        except PermissionError as pe:
+            return {"success": False, "error": f"Security restriction: {str(pe)}"}
+
+        if not safe_source.exists():
             return {"success": False, "error": f"File does not exist: {source_path}"}
 
-        target_dir = os.path.join(LOCAL_DRIVE_STAGING_DIR, destination_subfolder)
+        try:
+            safe_subfolder = validate_safe_subfolder(destination_subfolder)
+        except PermissionError as pe:
+            return {"success": False, "error": f"Invalid subfolder: {str(pe)}"}
+
+        target_dir = os.path.join(LOCAL_DRIVE_STAGING_DIR, safe_subfolder)
         os.makedirs(target_dir, exist_ok=True)
-        filename = os.path.basename(source_path)
+        filename = safe_source.name
         dest_path = os.path.join(target_dir, filename)
 
         import shutil
-        shutil.copy2(source_path, dest_path)
+        shutil.copy2(str(safe_source), dest_path)
 
         return {
             "success": True,
             "filename": filename,
             "staged_path": dest_path,
-            "folder": destination_subfolder,
+            "folder": safe_subfolder,
             "sync_ready": True,
-            "message": f"Staged '{filename}' to Google Drive Sync folder ({destination_subfolder})."
+            "message": f"Staged '{filename}' to Google Drive Sync folder ({safe_subfolder})."
         }
 
     def list_drive_staged_files(self) -> List[Dict[str, Any]]:

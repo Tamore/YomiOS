@@ -4,7 +4,8 @@ import io
 import re
 import edge_tts
 
-AUDIO_CACHE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "cache", "audio"))
+from config import WORKSPACE_ROOT
+AUDIO_CACHE_DIR = WORKSPACE_ROOT / "cache" / "audio"
 os.makedirs(AUDIO_CACHE_DIR, exist_ok=True)
 
 DEFAULT_VOICE = "en-US-AriaNeural"

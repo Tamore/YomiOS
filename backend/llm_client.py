@@ -2,13 +2,9 @@ import os
 import json
 import httpx
 from typing import Dict, Any, List, Optional
+from config import OLLAMA_HOST, DEFAULT_OLLAMA_MODEL, GEMINI_API_KEY, GROQ_API_KEY
 
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
-DEFAULT_OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
 FALLBACK_OLLAMA_MODEL = "llama3.2:3b"
-
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
 class UnifiedLLMClient:
     """
@@ -16,7 +12,7 @@ class UnifiedLLMClient:
     1. Local Ollama (Primary Sovereign Offline Brain)
     2. Google Gemini API (High-performance multimodal)
     3. Groq API (Ultra-low latency inference)
-    4. Heuristic Synthesis Fallback
+    4. Honest failure reporting when offline
     """
     def __init__(self):
         self.ollama_available = False
@@ -42,40 +38,60 @@ class UnifiedLLMClient:
     ) -> Dict[str, Any]:
         """
         Attempts execution in sequence:
-        1. Local Ollama (with quick 1.5s connect check)
-        2. Gemini API (if key configured)
-        3. Groq API (if key configured)
-        4. Structured fallback
+        1. Local Ollama primary model
+        2. Local Ollama fallback model
+        3. Gemini API (if key configured)
+        4. Groq API (if key configured)
+        5. Structured failure output
         """
-        # 1. Try Ollama (Fast 2.0s connect timeout)
-        try:
-            target_model = model or DEFAULT_OLLAMA_MODEL
-            payload = {
-                "model": target_model,
-                "prompt": f"{system_prompt}\n\n{prompt}" if system_prompt else prompt,
-                "stream": False,
-                "options": {
-                    "temperature": temperature,
-                    "top_p": 0.9,
-                    "num_predict": max_tokens
-                }
+        target_model = model or DEFAULT_OLLAMA_MODEL
+        payload = {
+            "model": target_model,
+            "prompt": f"{system_prompt}\n\n{prompt}" if system_prompt else prompt,
+            "stream": False,
+            "options": {
+                "temperature": temperature,
+                "top_p": 0.9,
+                "num_predict": max_tokens
             }
-            # Short connect timeout so we don't stall when Ollama daemon is paused
-            timeout_cfg = httpx.Timeout(connect=1.5, read=25.0, write=5.0, pool=2.0)
+        }
+        timeout_cfg = httpx.Timeout(connect=1.5, read=25.0, write=5.0, pool=2.0)
+        
+        # 1. Try Ollama Primary
+        try:
             async with httpx.AsyncClient(timeout=timeout_cfg) as client:
                 res = await client.post(f"{OLLAMA_HOST}/api/generate", json=payload)
                 if res.status_code == 200:
                     text = res.json().get("response", "").strip()
-                    return {
-                        "success": True,
-                        "provider": "ollama",
-                        "model": target_model,
-                        "content": text
-                    }
+                    if text:
+                        return {
+                            "success": True,
+                            "provider": "ollama",
+                            "model": target_model,
+                            "content": text
+                        }
         except Exception:
             pass
 
-        # 2. Try Gemini if configured
+        # 2. Try Ollama Fallback Model if primary was custom
+        if target_model != FALLBACK_OLLAMA_MODEL:
+            try:
+                payload["model"] = FALLBACK_OLLAMA_MODEL
+                async with httpx.AsyncClient(timeout=timeout_cfg) as client:
+                    res = await client.post(f"{OLLAMA_HOST}/api/generate", json=payload)
+                    if res.status_code == 200:
+                        text = res.json().get("response", "").strip()
+                        if text:
+                            return {
+                                "success": True,
+                                "provider": "ollama",
+                                "model": FALLBACK_OLLAMA_MODEL,
+                                "content": text
+                            }
+            except Exception:
+                pass
+
+        # 3. Try Gemini if configured
         if GEMINI_API_KEY:
             try:
                 import google.generativeai as genai
@@ -118,8 +134,8 @@ class UnifiedLLMClient:
         return {
             "success": False,
             "provider": "none",
-            "model": "fallback",
-            "content": "All external LLM endpoints are unreachable. Falling back to local deterministic rule-router."
+            "model": "none",
+            "content": "All configured LLM endpoints are unreachable."
         }
 
 llm_client = UnifiedLLMClient()
