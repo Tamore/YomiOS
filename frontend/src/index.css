@@ -249,10 +249,39 @@ body {
   filter: brightness(1.25);
 }
 
-/* Custom thin scrollbar */
+/* Global sleek dark scrollbar */
+html, body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 195, 215, 0.22) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 195, 215, 0.2);
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 195, 215, 0.45);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Custom thin scrollbar for inner card containers */
 .card-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+  scrollbar-color: rgba(255, 195, 215, 0.2) transparent;
 }
 .card-scroll::-webkit-scrollbar {
   width: 4px;
@@ -261,11 +290,11 @@ body {
   background: transparent;
 }
 .card-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 195, 215, 0.22);
   border-radius: 9999px;
 }
 .card-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 195, 215, 0.45);
 }
 
 .is-hidden {
