@@ -119,6 +119,16 @@ export async function fetchChatHistory(sessionId: string = "default"): Promise<S
   }
 }
 
+export async function syncAdmissionsPipeline(): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/api/admissions/sync`, { method: "POST" });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function synthesizeVoice(message: string): Promise<string | null> {
   try {
     const res = await fetch(`${API_BASE}/api/tts`, {

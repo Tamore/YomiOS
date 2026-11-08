@@ -19,7 +19,9 @@ from tools.os_control import launch_app, get_system_telemetry, get_top_processes
 from tools.admissions_engine import (
     get_target_universities_summary,
     calculate_lab_match,
-    draft_academic_email
+    draft_academic_email,
+    sync_admissions_pipeline,
+    load_target_universities
 )
 from tools.paper_reader import document_reader
 from tools.web_intelligence import live_web_search, scrape_webpage_markdown
@@ -213,8 +215,16 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
 
     # -------------------------------------------------------------
     # 3. ADMISSIONS & LAB PROFILER
-    # e.g., "admissions status", "check deadlines", "match lab sit", "draft email to fukuda"
+    # e.g., "admissions status", "check deadlines", "sync admissions", "draft email to fukuda"
     # -------------------------------------------------------------
+    if any(q in lower for q in ["sync admissions", "refresh pipeline", "sync pipeline", "sync tasks", "sync deadlines", "update deadlines"]):
+        sync_result = sync_admissions_pipeline()
+        return {
+            "reply": f"Synchronized admissions pipeline with SQLite tasks database: **{sync_result.get('created_tasks_count', 0)} new deadline tasks** deployed across **{sync_result.get('synced_universities', 0)} university tracks**.",
+            "tool_used": "admissions_sync",
+            "data": sync_result
+        }
+
     if any(q in lower for q in ["admissions status", "check deadlines", "japan deadlines", "university deadlines"]):
         summary = get_target_universities_summary()
         reply_lines = ["**AY2027 Japan Admissions Horizon:**"]
@@ -230,19 +240,43 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
 
     email_match = re.search(r'(?:draft|write)\s+(?:an?\s+)?(?:academic\s+)?email\s+(?:to\s+)?(?:prof(?:essor)?\.?\s+)?([a-zA-Z\s]+)', lower)
     if email_match:
-        prof_target = email_match.group(1).strip().title()
-        uni_name = "Target University"
+        prof_query = email_match.group(1).strip().lower()
+        universities = load_target_universities()
+        matched_prof = None
+        matched_uni_name = "Target University"
+        target_email = ""
+
+        for uid, uni in universities.items():
+            for adv in uni.get("advisors", []):
+                adv_name = adv.get("name", "")
+                if prof_query in adv_name.lower() or any(p in adv_name.lower() for p in prof_query.split()):
+                    matched_prof = adv_name
+                    matched_uni_name = uni.get("name", "Target University")
+                    target_email = adv.get("email", "")
+                    break
+            if matched_prof:
+                break
+
+        prof_target = matched_prof or email_match.group(1).strip().title()
         topic = "Distributed Systems and Self-Adaptive Autonomous Architectures"
         email_data = draft_academic_email(
             professor_name=prof_target,
-            university_name=uni_name,
+            university_name=matched_uni_name,
             research_topic=topic,
             email_purpose="inquiry"
         )
+
+        web_compose_url = google_workspace.create_gmail_compose_url(
+            to=target_email,
+            subject=email_data["subject"],
+            body=email_data["body"]
+        )
+
         return {
-            "reply": f"Drafted high-register academic reachout email for **Prof. {prof_target}** at {uni_name}.\n\n**Subject:** {email_data['subject']}",
+            "reply": f"Drafted high-register academic reachout email for **{prof_target}** at {matched_uni_name}.\n\n**Subject:** {email_data['subject']}",
             "tool_used": "admissions_email_drafter",
-            "data": email_data
+            "data": email_data,
+            "webUrl": web_compose_url
         }
 
     match_lab_match = re.search(r'(?:match|evaluate fit|lab fit)\s+(?:for\s+)?(?:lab\s+)?([a-zA-Z0-9_\-]+)', lower)

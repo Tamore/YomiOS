@@ -50,7 +50,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ onSendMessage, isP
   const quickPrompts = [
     { label: "Research Literature", prompt: "research self-adaptive systems by Kenji Tei" },
     { label: "Summarize URL & PDF", prompt: "Summarize https://news.ycombinator.com and export a PDF" },
-    { label: "⛩️ Japan Roadmap", prompt: "Start a roadmap for Japan Master's Fall 2027 Admissions" },
+    { label: "Japan Roadmap", prompt: "Start a roadmap for Japan Master's Fall 2027 Admissions" },
     { label: "⚡ System Telemetry", prompt: "System telemetry" }
   ];
 

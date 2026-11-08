@@ -24,7 +24,8 @@ from tools.os_control import get_system_telemetry, get_top_processes
 from tools.admissions_engine import (
     get_target_universities_summary,
     calculate_lab_match,
-    draft_academic_email
+    draft_academic_email,
+    sync_admissions_pipeline
 )
 from tools.paper_reader import document_reader
 from tools.web_intelligence import live_web_search, scrape_webpage_markdown
@@ -189,6 +190,13 @@ async def tts_endpoint(payload: ChatPayload):
 @app.get("/api/admissions/summary")
 def get_admissions_summary():
     return get_target_universities_summary()
+
+@app.post("/api/admissions/sync")
+@app.get("/api/admissions/sync")
+async def sync_admissions_endpoint():
+    res = sync_admissions_pipeline()
+    await broadcast_state()
+    return res
 
 # -------------------------------------------------------------
 # Tool Endpoints: MCP Connector & CiteX Bridge
