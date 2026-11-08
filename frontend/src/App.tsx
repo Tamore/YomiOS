@@ -35,7 +35,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'hud' | 'academics' | 'dojo' | 'mcp'>('hud');
 
   // Sticky Floating Window starts MINIMIZED by default so it never blocks the view
-  const [home, setHome] = useState(true);
+  const [home, setHome] = useState(() => !window.location.hash.includes('dashboard'));
+
+  useEffect(() => {
+    const handleHash = () => setHome(!window.location.hash.includes('dashboard'));
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
   const [isWindowOpen, setIsWindowOpen] = useState(false);
   const drawer = useRef<HTMLDivElement>(null);
   const drag = useRef({x: 0, y: 0, moved: false});
