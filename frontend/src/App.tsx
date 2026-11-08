@@ -1230,7 +1230,7 @@ export default function App() {
                     stickyTab === 'actions' ? 'bg-white/[0.08] text-white' : 'text-zinc-400 hover:text-white'
                   }`}
                 >
-                  SQLite Tasks ({tasks.filter(t => !t.is_completed).length})
+                  Tasks ({tasks.filter(t => !t.is_completed).length})
                 </button>
               </div>
 
@@ -1240,8 +1240,8 @@ export default function App() {
                   <div className="space-y-3">
                     {tasksLoading ? "Loading research tracks…" : tasksError ? "Research tracks unavailable." : tracks.length === 0 ? "No research tracks added." : tracks.map(track => (
                       <div key={track.id} className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                        <strong>{track.name}</strong>
-                        <p>{track.program}</p>
+                        <strong style={{ display: "block", fontSize: 14, lineHeight: 1.4 }}>{track.name}</strong>
+                        <p style={{ fontSize: 13, lineHeight: 1.4 }}>{track.program}</p>
                       </div>
                     ))}
                   </div>
