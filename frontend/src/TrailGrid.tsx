@@ -7,6 +7,7 @@ export default function TrailGrid() {
     const host = canvas?.parentElement;
     const ctx = canvas?.getContext('2d');
     if (!host || !canvas || !ctx) return;
+    const wordmark = host.querySelector<HTMLImageElement>('.voice-stage img');
     const size = 44;
     const cells = new Map<string, { x: number; y: number; time: number; strength: number }>();
     let frame = 0;
@@ -29,6 +30,17 @@ export default function TrailGrid() {
         ctx.strokeStyle = `rgba(255,206,224,${alpha * .84})`;
         ctx.fillRect(cell.x * size, cell.y * size, size, size);
         ctx.strokeRect(cell.x * size + .5, cell.y * size + .5, size-1, size-1);
+      }
+      if (wordmark?.complete && wordmark.naturalWidth && !host.classList.contains('awake')) {
+        const mark = wordmark.getBoundingClientRect();
+        const grid = canvas.getBoundingClientRect();
+        const padding = 6;
+        // Clear complete trail cells near the wordmark so no partial square edges remain.
+        const left = Math.floor((mark.left - grid.left - padding) / size) * size;
+        const top = Math.floor((mark.top - grid.top - padding) / size) * size;
+        const right = Math.ceil((mark.right - grid.left + padding) / size) * size;
+        const bottom = Math.ceil((mark.bottom - grid.top + padding) / size) * size;
+        ctx.clearRect(left, top, right - left, bottom - top);
       }
       if (cells.size) frame = requestAnimationFrame(paint);
     };

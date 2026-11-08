@@ -2,20 +2,29 @@ import sys
 import subprocess
 import tempfile
 import os
+import time
 from typing import Dict, Any
+from config import ENABLE_DEV_CODE_RUNNER
 
 def execute_python_code(code: str, timeout_seconds: float = 6.0) -> Dict[str, Any]:
     """
-    Safely executes arbitrary Python computation code in an isolated subprocess.
-    Captures stdout, stderr, execution time, and return code.
-    Ideal for rapid algorithms, math proofs, distributed consensus benchmarks, and data formatting.
+    Executes Python computation code if developer execution runner is explicitly enabled.
+    Disabled by default to prevent unauthenticated arbitrary code execution.
     """
+    if not ENABLE_DEV_CODE_RUNNER:
+        return {
+            "success": False,
+            "stdout": "",
+            "stderr": "Execution disabled by default for security. Set YOMI_ENABLE_DEV_RUNNER=true in .env to enable developer execution runner.",
+            "return_code": 403,
+            "execution_time_ms": 0
+        }
+
     with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8") as temp_file:
         temp_file.write(code)
         temp_path = temp_file.name
 
     try:
-        import time
         start_time = time.time()
         res = subprocess.run(
             [sys.executable, temp_path],
@@ -54,4 +63,3 @@ def execute_python_code(code: str, timeout_seconds: float = 6.0) -> Dict[str, An
                 os.remove(temp_path)
         except Exception:
             pass
-

@@ -1,7 +1,15 @@
 import httpx
 from bs4 import BeautifulSoup
 import urllib.parse
+import os
+import sys
+from pathlib import Path
 from typing import Dict, Any, List
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+from config import safe_http_get, validate_safe_url
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
@@ -68,36 +76,35 @@ async def live_web_search(query: str, max_results: int = 5) -> Dict[str, Any]:
 
 async def scrape_webpage_markdown(url: str) -> Dict[str, Any]:
     """
-    Fetches any webpage, strips scripts/ads/styles, and extracts clean
-    readable text/markdown structured with headers.
+    Fetches any public webpage, validates against SSRF on initial request and every redirect hop,
+    strips scripts/ads/styles, and extracts clean readable text/markdown structured with headers.
     """
     try:
-        async with httpx.AsyncClient(timeout=15.0, headers=HEADERS, follow_redirects=True) as client:
-            resp = await client.get(url)
-            if resp.status_code != 200:
-                return {"success": False, "error": f"HTTP {resp.status_code}"}
+        resp = await safe_http_get(url, timeout=15.0, headers=HEADERS)
+        if resp.status_code != 200:
+            return {"success": False, "error": f"HTTP {resp.status_code}"}
 
-            soup = BeautifulSoup(resp.text, "html.parser")
-            for tag in soup(["script", "style", "nav", "footer", "iframe", "noscript", "svg"]):
-                tag.decompose()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for tag in soup(["script", "style", "nav", "footer", "iframe", "noscript", "svg"]):
+            tag.decompose()
 
-            title = soup.title.string.strip() if soup.title and soup.title.string else "Web Intelligence Report"
-            
-            # Extract main article or body
-            main_node = soup.find("main") or soup.find("article") or soup.body or soup
-            text = main_node.get_text(separator="\n", strip=True)
-            
-            # Condense consecutive blank lines
-            lines = [line.strip() for line in text.splitlines() if line.strip()]
-            cleaned_body = "\n".join(lines[:150]) # First 150 meaningful lines
+        title = soup.title.string.strip() if soup.title and soup.title.string else "Web Intelligence Report"
+        
+        # Extract main article or body
+        main_node = soup.find("main") or soup.find("article") or soup.body or soup
+        text = main_node.get_text(separator="\n", strip=True)
+        
+        # Condense consecutive blank lines
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        cleaned_body = "\n".join(lines[:150]) # First 150 meaningful lines
 
-            return {
-                "success": True,
-                "url": url,
-                "title": title,
-                "content_preview": cleaned_body[:2500],
-                "total_lines": len(lines)
-            }
+        return {
+            "success": True,
+            "url": url,
+            "title": title,
+            "content_preview": cleaned_body[:2500],
+            "total_lines": len(lines)
+        }
     except Exception as e:
         return {"success": False, "url": url, "error": str(e)}
 

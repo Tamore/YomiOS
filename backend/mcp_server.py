@@ -11,6 +11,7 @@ if BACKEND_DIR not in sys.path:
 import database as db
 import meta_agent_factory as maf
 from tools.os_control import get_system_telemetry
+from config import validate_workspace_path, WORKSPACE_ROOT
 
 # Known registered projects and directories
 WORKSPACE_DIR = os.path.abspath(os.path.join(BACKEND_DIR, "..", ".."))
@@ -38,14 +39,17 @@ def handle_get_project_context(project_name: str) -> str:
     if not matched_path or not os.path.exists(matched_path):
         return f"Project '{project_name}' not found. Registered projects: {list(REGISTERED_PROJECTS.keys())}"
 
-    # Extract README or key docs
+    # Extract README or key docs safely
     readme_content = ""
     for candidate in ["README.md", "readme.md", "README.txt"]:
-        c_path = os.path.join(matched_path, candidate)
-        if os.path.exists(c_path):
-            with open(c_path, "r", encoding="utf-8", errors="ignore") as f:
-                readme_content = f.read(2000)
-            break
+        try:
+            c_path = validate_workspace_path(candidate, base_dir=Path(matched_path))
+            if c_path.exists():
+                with open(str(c_path), "r", encoding="utf-8", errors="ignore") as f:
+                    readme_content = f.read(2000)
+                break
+        except Exception:
+            pass
 
     # Get DB tasks and roadmaps matching this project
     tasks = db.search_global_memory(project_name, limit=5).get("matched_tasks", [])
@@ -258,6 +262,7 @@ async def handle_request(req: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         tool_name = params.get("name")
         args = params.get("arguments", {})
         
+        is_error = False
         try:
             if tool_name == "yomi_get_project_context":
                 text = handle_get_project_context(args.get("project_name", ""))
@@ -273,13 +278,14 @@ async def handle_request(req: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 text = handle_add_task(args.get("title", ""), args.get("priority", "P2"))
             else:
                 text = f"Error: Unknown tool '{tool_name}'."
+                is_error = True
 
             return {
                 "jsonrpc": "2.0",
                 "id": req_id,
                 "result": {
                     "content": [{"type": "text", "text": text}],
-                    "isError": False
+                    "isError": is_error
                 }
             }
         except Exception as e:
