@@ -18,6 +18,7 @@ from typing import List, Dict, Any, Optional
 import database as db
 import brain
 import memory
+from reference_documents import router as reference_router
 import meta_agent_factory as maf
 from voice_engine import synthesize_speech, stream_speech_chunks, DEFAULT_VOICE
 from tools.os_control import get_system_telemetry, get_top_processes
@@ -39,6 +40,8 @@ from mcp_connector import mcp_connector
 from config import ALLOWED_ORIGINS, ENABLE_DEV_CODE_RUNNER, validate_workspace_path, validate_safe_url
 
 app = FastAPI(title="Yomi 2.0 Backlit Executive Engine", version="2.0.0")
+
+app.include_router(reference_router)
 
 app.add_middleware(
     CORSMiddleware,

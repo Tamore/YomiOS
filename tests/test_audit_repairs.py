@@ -213,17 +213,43 @@ class TestYomiAuditRepairs(unittest.TestCase):
         self.assertIn("portal", cleaned)
 
     def test_voice_stream_chunks_generator(self):
-        """Verify stream_speech_chunks returns audio bytes chunks."""
         from voice_engine import stream_speech_chunks
+
+        class SpeechSource:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def stream(self):
+                yield {"type": "audio", "data": b"mp3-audio"}
+
         async def run():
-            chunks = []
+            return [chunk async for chunk in stream_speech_chunks("Speech test.")]
+
+        with patch("voice_engine.edge_tts.Communicate", SpeechSource):
+            self.assertEqual(asyncio.run(run()), [b"mp3-audio"])
+
+    def test_partial_stream_never_appends_wav(self):
+        from voice_engine import stream_speech_chunks
+
+        class BrokenSource:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def stream(self):
+                yield {"type": "audio", "data": b"mp3"}
+                raise RuntimeError("Network interrupted")
+
+        received = []
+
+        async def run():
             async for chunk in stream_speech_chunks("Speech test."):
-                chunks.append(chunk)
-            return chunks
-        chunks = asyncio.run(run())
-        self.assertGreater(len(chunks), 0)
-        total_bytes = sum(len(c) for c in chunks)
-        self.assertGreater(total_bytes, 100)
+                received.append(chunk)
+
+        with patch("voice_engine.edge_tts.Communicate", BrokenSource), patch("voice_engine._local_sapi5_synthesize") as fallback:
+            with self.assertRaises(RuntimeError):
+                asyncio.run(run())
+            self.assertEqual(received, [b"mp3"])
+            fallback.assert_not_called()
 
 if __name__ == "__main__":
     unittest.main()

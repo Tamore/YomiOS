@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import './voice-home.css';
 import Orb from './Orb';
-import TrailGrid from './TrailGrid';
+
 import { sendChat, synthesizeVoice, getStreamingVoiceUrl } from './api';
 
 type Props = { panel: boolean; setPanel: (value: boolean) => void; openDashboard: () => void };
@@ -25,13 +25,16 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
   const animFrameRef = useRef<number>(0);
   const manuallyToggled = useRef(false);
 
-  // Microphone stream & analyser for live FFT reactivity during listening & barge-in
+  // Microphone analyser for live animation while listening
+  const micGeneration = useRef(0);
   const micStreamRef = useRef<MediaStream | null>(null);
   const micSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const micAnalyserRef = useRef<AnalyserNode | null>(null);
 
   // Cleanup helper for microphone hardware resources
   const stopMicAnalysis = useCallback(() => {
+    micGeneration.current++;
+    cancelAnimationFrame(animFrameRef.current);
     if (micStreamRef.current) {
       micStreamRef.current.getTracks().forEach(track => track.stop());
       micStreamRef.current = null;
@@ -67,6 +70,7 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
 
   // Start live microphone stream and FFT analysis for WebGL Orb during listening
   const startMicAnalysis = useCallback(async () => {
+    const generation = ++micGeneration.current;
     try {
       const ctx = audioContextRef.current ?? new AudioContext();
       audioContextRef.current = ctx;
@@ -81,6 +85,10 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
           autoGainControl: true,
         }
       });
+      if (generation !== micGeneration.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
       micStreamRef.current = stream;
 
       const source = ctx.createMediaStreamSource(stream);
@@ -177,7 +185,7 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
         void context.resume().catch(() => {});
       }
 
-      if (context.state !== 'closed') {
+      if (context.state === 'running') {
         try {
           const analyser = context.createAnalyser();
           analyser.fftSize = 64;
@@ -241,6 +249,7 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
         void handleAudioError();
       }
     } catch (err: any) {
+      if (id !== playbackId.current) return;
       setCaption(`Connection error: ${err.message || 'Brain offline'}`);
       setPhase('idle');
       setAudioLevel(0);
@@ -268,6 +277,7 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
       recognition.continuous = false;
 
       recognition.onstart = () => {
+        if (recognitionRef.current !== recognition) return;
         setPhase('listening');
         setCaption('Listening…');
         void startMicAnalysis();
@@ -307,6 +317,7 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
 
       try {
         recognition.start();
+        setPhase('listening');
         return;
       } catch {
         recognitionRef.current = null;
@@ -322,7 +333,7 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
     }
   }, [processVoiceQuery, startMicAnalysis, stopMicAnalysis]);
 
-  // Voice barge-in: interrupts speech playback and immediately begins listening
+  // Click or keyboard interruption: interrupts speech playback and immediately begins listening
   const interruptAndListen = useCallback(() => {
     playbackId.current++;
     if (audioRef.current) {
@@ -366,7 +377,7 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
   // Spacebar hotkey for hands-free voice toggle & barge-in
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+      if (e.code === 'Space' && !e.repeat && !(e.target instanceof HTMLElement && e.target.closest('input, textarea, button, a, [contenteditable]'))) {
         e.preventDefault();
         handleToggleVoice();
       }
@@ -377,7 +388,7 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
 
   return (
     <section className={`voice-home ${phase === 'idle' ? '' : 'awake'} ${panel ? 'with-panel' : ''}`}>
-      <TrailGrid />
+
       <header>
         <img src={import.meta.env.BASE_URL + 'yomi-symbol.svg'} alt="Yomi" width="32" height="32" />
         <nav>
@@ -399,7 +410,6 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
         className="voice-center" 
         style={{ pointerEvents: 'auto', cursor: 'pointer' }} 
         onClick={handleToggleVoice}
-        title={phase === 'speaking' ? 'Click to interrupt & speak' : phase === 'listening' ? 'Click to stop listening' : 'Click or press Space to speak'}
       >
         <div className="voice-stage" data-phase={phase}>
           <img src={import.meta.env.BASE_URL + 'yomi-wordmark.svg'} alt="Yomi" />
@@ -414,7 +424,7 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
             forceHoverState={phase === 'listening'} 
           />
           <div className="voice-caption" aria-live="polite">
-            <span key={caption || phase}>{caption || (phase === 'idle' ? 'Press Space or click to speak' : '')}</span>
+            <span key={caption || phase}>{caption}</span>
           </div>
         </div>
       </div>

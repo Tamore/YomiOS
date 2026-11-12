@@ -1,3 +1,5 @@
+import AcademicDossier from './components/AcademicDossier';
+import ReferenceLibrary from './components/ReferenceLibrary';
 import VoiceHome from './VoiceHome';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { 
@@ -32,13 +34,21 @@ interface ChatMessage {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'hud' | 'academics' | 'dojo' | 'mcp'>('hud');
+  const [activeTab, setActiveTab] = useState<'hud' | 'academics' | 'dojo' | 'mcp'>(() => { const tab = window.location.hash.split('/')[1]; return tab === 'academics' || tab === 'dojo' || tab === 'mcp' ? tab : 'hud'; });
 
   // Sticky Floating Window starts MINIMIZED by default so it never blocks the view
   const [home, setHome] = useState(() => !window.location.hash.includes('dashboard'));
+  useEffect(() => {
+    window.history.replaceState(null, '', home ? '#voice' : '#dashboard/' + activeTab);
+  }, [home, activeTab]);
+
 
   useEffect(() => {
-    const handleHash = () => setHome(!window.location.hash.includes('dashboard'));
+    const handleHash = () => {
+      setHome(!window.location.hash.includes('dashboard'));
+      const tab = window.location.hash.split('/')[1];
+      setActiveTab(tab === 'academics' || tab === 'dojo' || tab === 'mcp' ? tab : 'hud');
+    };
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
@@ -425,6 +435,7 @@ export default function App() {
         {/* ------------------------------------------------------------- */}
         {activeTab === 'hud' && (
           <div className="yomi-tiles tiles-hud">
+
             
             {/* Activity & Habit Heatmap Frame */}
             <section id="activity-calendar" className="bklit-frame">
@@ -566,30 +577,7 @@ export default function App() {
                   </div>
                 </div>
             </section>
-            <section className="bklit-frame metric-tile">
-<div className="bklit-frame-panel flex flex-col justify-between h-full space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Dossier Completion</span>
-                    <span className="text-xs font-mono text-zinc-400">Not verified</span>
-                  </div>
-                  <div className="flex items-center justify-center py-1">
-                    <div className="relative w-24 h-24 flex items-center justify-center">
-                      <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3.5" />
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="var(--chart-1)" strokeWidth="3.5" strokeDasharray="0, 100" strokeLinecap="round" />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-base font-bold font-mono text-zinc-400">0%</span>
-                        <span className="text-[9px] text-zinc-500 uppercase tracking-wider">Unverified</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-zinc-400 pt-2 border-t border-white/[0.06]">
-                    <span>Credentials</span>
-                    <span className="font-mono text-zinc-400 font-medium">Not verified</span>
-                  </div>
-                </div>
-            </section>
+            <AcademicDossier compact />
             <section className="bklit-frame metric-tile">
 <div className="bklit-frame-panel flex flex-col justify-between h-full space-y-4">
                   <div className="flex items-center justify-between">
@@ -720,43 +708,8 @@ export default function App() {
               </p>
             </div>
 
-            {/* Master's Thesis Proposal */}
-            <section className="bklit-frame">
-              <div className="bklit-frame-panel space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <span className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Research Proposal & Monograph</span>
-                    <h2 className="text-lg font-bold text-white mt-0.5">
-                      Decentralized Edge Intelligence & Fault-Tolerant Consensus for Distributed Systems
-                    </h2>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono px-3 py-1.5 rounded-lg bg-black/40 border border-white/[0.08] text-zinc-400">
-                      Draft Monograph
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-2 border-y border-white/[0.06]">
-                  <div>
-                    <span className="text-[10px] font-mono text-zinc-500 uppercase">Target Domain</span>
-                    <p className="text-xs font-medium text-white mt-0.5">Distributed Computing</p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-mono text-zinc-500 uppercase">Architecture</span>
-                    <p className="text-xs font-medium text-white mt-0.5">Low-Latency Consensus</p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-mono text-zinc-500 uppercase">Edge Runtime</span>
-                    <p className="text-xs font-medium text-white mt-0.5">Jetson Orin Nano</p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-mono text-zinc-500 uppercase">Verification Status</span>
-                    <p className="text-xs font-medium text-amber-400 mt-0.5">Peer Review Pending</p>
-                  </div>
-                </div>
-              </div>
-            </section>
+            <AcademicDossier />
+            <ReferenceLibrary />
 
             {/* Live ArXiv Literature Satellite */}
             <section className="bklit-frame">

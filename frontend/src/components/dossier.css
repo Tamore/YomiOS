@@ -1,0 +1,14 @@
+
+.profile-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.profile-fields dt{font-size:11px;color:#a6a0aa;margin-bottom:5px}
+.profile-fields dd{font-size:14px;line-height:1.6;overflow-wrap:anywhere}
+.university-record{padding:16px;background:#ffffff03;border:1px solid #ffffff12;border-radius:14px}
+.university-status{font-size:12px;color:#edb0c8;margin:10px 0}
+.dossier-timeline{border-left:1px solid #755063;margin-left:6px;padding-left:22px}
+.dossier-timeline li{position:relative;font-size:13px;line-height:1.7;padding-bottom:20px}
+.dossier-timeline li:before{content:'';position:absolute;left:-27px;top:8px;width:8px;height:8px;border-radius:50%;background:#ed9cbd}
+.dossier-stats{display:flex;gap:28px;color:#aaa}
+.dossier-stats b{display:block;font-size:28px;color:#edb0c8}
+.reference-row{display:flex;gap:12px;align-items:center;padding:12px;border-bottom:1px solid #ffffff12;font-size:14px;overflow-wrap:anywhere}
+.reference-row small{display:block;color:#a6a0aa;font-size:11px;margin-top:4px}
+@media(max-width:600px){.profile-fields{grid-template-columns:1fr}}
