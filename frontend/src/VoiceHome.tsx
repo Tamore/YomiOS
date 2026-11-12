@@ -1,147 +1,128 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import './voice-home.css';
+import Orb from './Orb';
 import TrailGrid from './TrailGrid';
-import { sendChat, synthesizeVoice } from './api';
+import { sendChat, synthesizeVoice, getStreamingVoiceUrl } from './api';
 
 type Props = { panel: boolean; setPanel: (value: boolean) => void; openDashboard: () => void };
+type SpeechResult = { 0: { transcript: string }; isFinal: boolean };
 type Phase = 'idle' | 'listening' | 'thinking' | 'speaking' | 'quiet';
 
-function Orb({ phase, audioLevel = 0 }: { phase: Phase; audioLevel?: number }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const ctx = ref.current?.getContext('2d');
-    if (!ctx || phase === 'idle') return;
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let frame = 0;
-    function draw(now: number) {
-      if (!ctx) return;
-      const t = reduced.matches ? 0 : now / 1000;
-      // Pulse beat combines audio frequency level and harmonic waves when speaking
-      const reactiveBoost = audioLevel * 25;
-      const beat = phase === 'speaking' 
-        ? Math.abs(Math.sin(t * 7) * Math.cos(t * 2.7)) * 12 + reactiveBoost
-        : phase === 'listening'
-        ? Math.abs(Math.sin(t * 3.5)) * 6
-        : 0;
-      const radius = 139 + 4 * Math.sin(t * 1.4) + beat;
-      ctx.clearRect(0, 0, 880, 440);
-      ctx.save();
-      ctx.translate(440, 220);
-      const halo = ctx.createRadialGradient(0, 0, 62, 0, 0, 215);
-      halo.addColorStop(0, 'transparent');
-      halo.addColorStop(0.56, 'rgba(244,65,141,.13)');
-      halo.addColorStop(1, 'transparent');
-      ctx.fillStyle = halo;
-      ctx.fillRect(-220, -220, 440, 440);
-      ctx.globalCompositeOperation = 'lighter';
-      // Offset closed curves form a folded ribbon; the moving highlight reveals its depth.
-      const angle = t * 0.7;
-      const ink = ctx.createLinearGradient(-160 * Math.cos(angle), -160 * Math.sin(angle), 160 * Math.cos(angle), 160 * Math.sin(angle));
-      ink.addColorStop(0, '#923262');
-      ink.addColorStop(0.42, '#f168a1');
-      ink.addColorStop(0.72, '#ffd3d9');
-      ink.addColorStop(1, '#df5488');
-      ctx.strokeStyle = ink;
-      for (let strand = 0; strand < 44; strand++) {
-        const v = strand / 43;
-        ctx.globalAlpha = 0.18 + 0.36 * Math.pow(Math.abs(2 * v - 1), 4);
-        ctx.lineWidth = strand === 43 ? 2 : 1.15;
-        ctx.beginPath();
-        for (let point = 0; point <= 144; point++) {
-          const a = (point * Math.PI) / 72;
-          const fold = Math.sin(3 * a - t + 2.1 * v);
-          const r = radius + 16 * fold + 8 * Math.cos(2 * a + t * 0.64) + 19 * (v - 0.5);
-          const x = r * Math.cos(a) + 10 * Math.sin(2 * a + t * 0.6);
-          const y = r * Math.sin(a) * (0.63 + 0.35 * v) + 25 * (1 - v) * Math.sin(2 * a + t * 0.85);
-          if (point === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.closePath();
-        ctx.stroke();
-      }
-      ctx.restore();
-      if (!reduced.matches) frame = requestAnimationFrame(draw);
-    }
-    draw(performance.now());
-    return () => cancelAnimationFrame(frame);
-  }, [phase, audioLevel]);
-  return <canvas ref={ref} width={880} height={440} aria-hidden="true" />;
-}
+const rosePalette = ['#e77ca5', '#ffe1db', '#76183c'];
 
 export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [caption, setCaption] = useState<string>('');
   const [audioLevel, setAudioLevel] = useState<number>(0);
 
+  const phaseRef = useRef<Phase>('idle');
+  phaseRef.current = phase;
+
   const recognitionRef = useRef<any>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
+  const playbackId = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animFrameRef = useRef<number>(0);
   const manuallyToggled = useRef(false);
 
-  // Initialize SpeechRecognition once if available in the browser
-  useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
+  // Microphone stream & analyser for live FFT reactivity during listening & barge-in
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const micSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const micAnalyserRef = useRef<AnalyserNode | null>(null);
 
-      recognition.onstart = () => {
-        setPhase('listening');
-        setCaption('Listening to your voice...');
-      };
-
-      recognition.onresult = (event: any) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          transcript += event.results[i][0].transcript;
-        }
-        if (transcript.trim()) {
-          setCaption(`“${transcript.trim()}”`);
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn('Speech recognition error:', event.error);
-        if (event.error !== 'no-speech') {
-          setCaption(`Speech error: ${event.error}`);
-        }
-        setPhase('idle');
-      };
-
-      recognition.onend = () => {
-      };
-
-      recognitionRef.current = recognition;
+  // Cleanup helper for microphone hardware resources
+  const stopMicAnalysis = useCallback(() => {
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach(track => track.stop());
+      micStreamRef.current = null;
     }
+    if (micSourceRef.current) {
+      try { micSourceRef.current.disconnect(); } catch { /* Ignore */ }
+      micSourceRef.current = null;
+    }
+    micAnalyserRef.current = null;
+  }, []);
 
+  // Cleanup all audio and recognition on unmount
+  useEffect(() => {
     return () => {
+      playbackId.current++;
       if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch {}
+        const recognition = recognitionRef.current;
+        recognitionRef.current = null;
+        try { recognition.abort(); } catch { /* Ignore */ }
       }
+      stopMicAnalysis();
+      window.speechSynthesis?.cancel();
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current = null;
       }
       if (animFrameRef.current) {
         cancelAnimationFrame(animFrameRef.current);
       }
+      void audioContextRef.current?.close();
     };
+  }, [stopMicAnalysis]);
+
+  // Start live microphone stream and FFT analysis for WebGL Orb during listening
+  const startMicAnalysis = useCallback(async () => {
+    try {
+      const ctx = audioContextRef.current ?? new AudioContext();
+      audioContextRef.current = ctx;
+      if (ctx.state === 'suspended') {
+        await ctx.resume().catch(() => {});
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        }
+      });
+      micStreamRef.current = stream;
+
+      const source = ctx.createMediaStreamSource(stream);
+      micSourceRef.current = source;
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 64;
+      analyser.smoothingTimeConstant = 0.55;
+      source.connect(analyser);
+      micAnalyserRef.current = analyser;
+
+      const levels = new Uint8Array(analyser.frequencyBinCount);
+      const measureMic = () => {
+        if (phaseRef.current !== 'listening' || !micAnalyserRef.current) return;
+        analyser.getByteFrequencyData(levels);
+        let sum = 0;
+        for (let i = 0; i < levels.length; i++) sum += levels[i];
+        const normalized = sum / levels.length / 255;
+        setAudioLevel(normalized);
+        animFrameRef.current = requestAnimationFrame(measureMic);
+      };
+      animFrameRef.current = requestAnimationFrame(measureMic);
+    } catch (err) {
+      console.warn('Microphone stream access unavailable for live FFT:', err);
+    }
   }, []);
 
-  // Process voice query through AI Brain and synthesize response
+  // Forward declarations for voice processing and state management
   const processVoiceQuery = useCallback(async (text: string) => {
+    stopMicAnalysis();
     if (!text.trim()) {
       setPhase('idle');
       setCaption('');
+      setAudioLevel(0);
       return;
     }
 
+    const id = ++playbackId.current;
     setPhase('thinking');
     setCaption('Yomi is thinking...');
+    setAudioLevel(0);
 
-    // If query asks for pipeline/tasks, open the pipeline panel
+    // If query asks for pipeline or tasks, reveal the drawer
     const lower = text.toLowerCase();
     if (lower.includes('pipeline') || lower.includes('task') || lower.includes('show') || lower.includes('status')) {
       if (!manuallyToggled.current) {
@@ -150,129 +131,249 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
     }
 
     try {
-      // 1. Send query to Yomi Brain
+      // 1. Process intent with Yomi Brain
       const chatRes = await sendChat(text, 'voice-session');
       const reply = chatRes.reply || "I've synchronized your academic and research satellite.";
 
+      if (id !== playbackId.current) return;
       setCaption(`“${reply}”`);
-      setPhase('speaking');
 
-      // 2. Synthesize speech using edge-tts
-      const audioUrl = await synthesizeVoice(reply);
+      const finishSpeech = () => {
+        if (id !== playbackId.current) return;
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+        audioRef.current = null;
+        setAudioLevel(0);
+        setPhase('idle');
+      };
 
-      if (audioUrl) {
-        const audio = new Audio(audioUrl);
-        audioRef.current = audio;
-
-        // Setup AudioContext frequency analysis to drive orb pulsing
-        try {
-          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-          if (AudioContextClass) {
-            const actx = new AudioContextClass();
-            audioContextRef.current = actx;
-            const source = actx.createMediaElementSource(audio);
-            const analyser = actx.createAnalyser();
-            analyser.fftSize = 64;
-            source.connect(analyser);
-            analyser.connect(actx.destination);
-            analyserRef.current = analyser;
-
-            const dataArray = new Uint8Array(analyser.frequencyBinCount);
-            const checkVolume = () => {
-              if (analyserRef.current && phase === 'speaking') {
-                analyserRef.current.getByteFrequencyData(dataArray);
-                let sum = 0;
-                for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-                const avg = sum / dataArray.length / 255;
-                setAudioLevel(avg);
-                animFrameRef.current = requestAnimationFrame(checkVolume);
-              }
-            };
-            animFrameRef.current = requestAnimationFrame(checkVolume);
-          }
-        } catch {
-          // AudioContext restrictions fallback
+      // Local synthesis fallback using browser SpeechSynthesis
+      const speakLocally = () => {
+        if (id !== playbackId.current) return;
+        if (!window.speechSynthesis) {
+          finishSpeech();
+          setCaption(`“${reply}”`);
+          return;
         }
-
-        audio.onended = () => {
-          setPhase('quiet');
-          setAudioLevel(0);
-          setTimeout(() => {
-            setPhase('idle');
-            setCaption('');
-          }, 2000);
+        const utterance = new SpeechSynthesisUtterance(reply);
+        utterance.onstart = () => { if (id === playbackId.current) setPhase('speaking'); };
+        utterance.onend = finishSpeech;
+        utterance.onerror = () => {
+          if (id !== playbackId.current) return;
+          finishSpeech();
         };
+        window.speechSynthesis.speak(utterance);
+      };
 
-        await audio.play();
-      } else {
-        // Fallback browser speech synthesis if offline
-        if ('speechSynthesis' in window) {
-          const utterance = new SpeechSynthesisUtterance(reply);
-          utterance.onend = () => {
-            setPhase('idle');
-            setCaption('');
+      // 2. Play speech using streaming audio endpoint with real-time FFT
+      const streamUrl = getStreamingVoiceUrl(reply);
+      const audio = new Audio();
+      audio.crossOrigin = 'anonymous';
+      audio.src = streamUrl;
+      audioRef.current = audio;
+
+      const context = audioContextRef.current ?? new AudioContext();
+      audioContextRef.current = context;
+      if (context.state === 'suspended') {
+        void context.resume().catch(() => {});
+      }
+
+      if (context.state !== 'closed') {
+        try {
+          const analyser = context.createAnalyser();
+          analyser.fftSize = 64;
+          analyser.smoothingTimeConstant = 0.65;
+          const source = context.createMediaElementSource(audio);
+          source.connect(analyser);
+          analyser.connect(context.destination);
+
+          const levels = new Uint8Array(analyser.frequencyBinCount);
+          const measureSpeaker = () => {
+            if (id !== playbackId.current || audio.paused) return;
+            analyser.getByteFrequencyData(levels);
+            let sum = 0;
+            for (let i = 0; i < levels.length; i++) sum += levels[i];
+            setAudioLevel(sum / levels.length / 255);
+            animFrameRef.current = requestAnimationFrame(measureSpeaker);
           };
-          window.speechSynthesis.speak(utterance);
-        } else {
-          setTimeout(() => {
-            setPhase('idle');
-            setCaption('');
-          }, 3500);
+          audio.onplaying = () => {
+            if (id === playbackId.current) {
+              setPhase('speaking');
+              measureSpeaker();
+            }
+          };
+        } catch {
+          // If media element source attachment fails, continue with standard playback
+          audio.onplaying = () => { if (id === playbackId.current) setPhase('speaking'); };
         }
+      } else {
+        audio.onplaying = () => { if (id === playbackId.current) setPhase('speaking'); };
+      }
+
+      audio.onended = finishSpeech;
+
+      let fallbackAttempted = false;
+      const handleAudioError = async () => {
+        if (fallbackAttempted || id !== playbackId.current) return;
+        fallbackAttempted = true;
+        audio.pause();
+        audioRef.current = null;
+        // Attempt static file synthesis fallback
+        try {
+          const staticUrl = await synthesizeVoice(reply);
+          if (staticUrl && id === playbackId.current) {
+            const fallbackAudio = new Audio(staticUrl);
+            fallbackAudio.onended = finishSpeech;
+            fallbackAudio.onplaying = () => { if (id === playbackId.current) setPhase('speaking'); };
+            audioRef.current = fallbackAudio;
+            await fallbackAudio.play();
+            return;
+          }
+        } catch { /* Continue to local synthesis */ }
+        speakLocally();
+      };
+
+      audio.onerror = handleAudioError;
+
+      try {
+        await audio.play();
+        if (id === playbackId.current) setPhase('speaking');
+      } catch {
+        void handleAudioError();
       }
     } catch (err: any) {
       setCaption(`Connection error: ${err.message || 'Brain offline'}`);
       setPhase('idle');
+      setAudioLevel(0);
     }
-  }, [setPanel, phase]);
+  }, [setPanel, stopMicAnalysis]);
 
-  // Activate microphone or start simulated demo
-  const handleToggleVoice = useCallback(() => {
-    // If audio is currently speaking, stop it
-    if (audioRef.current && !audioRef.current.paused) {
+  // Activate microphone listening with SpeechRecognition & live FFT
+  const startListening = useCallback(() => {
+    // Cancel any active audio playback immediately
+    playbackId.current++;
+    if (audioRef.current) {
       audioRef.current.pause();
-      setPhase('idle');
+      audioRef.current = null;
+    }
+    window.speechSynthesis?.cancel();
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    setAudioLevel(0);
+
+    const Recognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (Recognition) {
+      const recognition = new Recognition();
+      recognitionRef.current = recognition;
+      recognition.lang = 'en-US';
+      recognition.interimResults = true;
+      recognition.continuous = false;
+
+      recognition.onstart = () => {
+        setPhase('listening');
+        setCaption('Listening…');
+        void startMicAnalysis();
+      };
+
+      recognition.onresult = (event: any) => {
+        if (recognitionRef.current !== recognition) return;
+        const results = Array.from(event.results) as SpeechResult[];
+        const transcript = results.map(result => result[0].transcript).join(' ').trim();
+        if (!transcript) return;
+        setCaption(`“${transcript}”`);
+        if (results.some(result => result.isFinal)) {
+          recognitionRef.current = null;
+          recognition.stop();
+          stopMicAnalysis();
+          void processVoiceQuery(transcript);
+        }
+      };
+
+      recognition.onerror = (event: { error: string }) => {
+        if (recognitionRef.current !== recognition) return;
+        recognitionRef.current = null;
+        stopMicAnalysis();
+        setPhase('idle');
+        setCaption(event.error === 'no-speech' ? '' : `Speech error: ${event.error}`);
+        setAudioLevel(0);
+      };
+
+      recognition.onend = () => {
+        if (recognitionRef.current !== recognition) return;
+        recognitionRef.current = null;
+        stopMicAnalysis();
+        setCaption('');
+        setPhase('idle');
+        setAudioLevel(0);
+      };
+
+      try {
+        recognition.start();
+        return;
+      } catch {
+        recognitionRef.current = null;
+        stopMicAnalysis();
+      }
+    }
+
+    // Interactive text prompt fallback if SpeechRecognition is blocked or unsupported
+    const promptText = window.prompt("Speak to Yomi (or enter query):", "Show my university pipeline and tasks");
+    if (promptText) {
+      setCaption(`“${promptText}”`);
+      void processVoiceQuery(promptText);
+    }
+  }, [processVoiceQuery, startMicAnalysis, stopMicAnalysis]);
+
+  // Voice barge-in: interrupts speech playback and immediately begins listening
+  const interruptAndListen = useCallback(() => {
+    playbackId.current++;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    window.speechSynthesis?.cancel();
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    setAudioLevel(0);
+    setCaption('');
+    startListening();
+  }, [startListening]);
+
+  // Toggle voice button and stage click handler
+  const handleToggleVoice = useCallback(() => {
+    // If speaking: barge-in interrupt and immediately listen
+    if (phase === 'speaking') {
+      interruptAndListen();
+      return;
+    }
+
+    // If already listening: cancel and reset to idle
+    if (phase === 'listening') {
+      const current = recognitionRef.current;
+      if (current) {
+        recognitionRef.current = null;
+        try { current.abort(); } catch { /* Ignore */ }
+      }
+      stopMicAnalysis();
       setCaption('');
+      setPhase('idle');
       setAudioLevel(0);
       return;
     }
 
-    if (phase === 'listening') {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
+    if (phase === 'thinking') return;
+
+    startListening();
+  }, [phase, interruptAndListen, startListening, stopMicAnalysis]);
+
+  // Spacebar hotkey for hands-free voice toggle & barge-in
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault();
+        handleToggleVoice();
       }
-      return;
-    }
-
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.onresult = (event: any) => {
-          let finalTranscript = '';
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            finalTranscript += event.results[i][0].transcript;
-          }
-          if (finalTranscript.trim()) {
-            setCaption(`“${finalTranscript.trim()}”`);
-            if (event.results[0].isFinal) {
-              processVoiceQuery(finalTranscript.trim());
-            }
-          }
-        };
-
-        recognitionRef.current.start();
-        return;
-      } catch (err) {
-        console.warn('Recognition start failed, falling back to simulated prompt:', err);
-      }
-    }
-
-    // Fallback: prompt for user input or run interactive demo
-    const promptText = window.prompt("Speak to Yomi (or enter query):", "Show my university pipeline and tasks");
-    if (promptText) {
-      setCaption(`“${promptText}”`);
-      processVoiceQuery(promptText);
-    }
-  }, [phase, processVoiceQuery]);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleToggleVoice]);
 
   return (
     <section className={`voice-home ${phase === 'idle' ? '' : 'awake'} ${panel ? 'with-panel' : ''}`}>
@@ -294,19 +395,39 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
         </nav>
       </header>
 
-      <div className="voice-center" style={{ pointerEvents: 'auto', cursor: 'pointer' }} onClick={handleToggleVoice} title="Click to speak with Yomi">
-        <div className="voice-stage">
+      <div 
+        className="voice-center" 
+        style={{ pointerEvents: 'auto', cursor: 'pointer' }} 
+        onClick={handleToggleVoice}
+        title={phase === 'speaking' ? 'Click to interrupt & speak' : phase === 'listening' ? 'Click to stop listening' : 'Click or press Space to speak'}
+      >
+        <div className="voice-stage" data-phase={phase}>
           <img src={import.meta.env.BASE_URL + 'yomi-wordmark.svg'} alt="Yomi" />
-          <Orb phase={phase} audioLevel={audioLevel} />
+          <Orb 
+            colors={rosePalette} 
+            backgroundColor="#100c0e" 
+            speed={phase === 'thinking' ? 1.85 : phase === 'listening' ? 1.1 + audioLevel * 1.2 : 1} 
+            trail={phase === 'thinking' ? 2 : 1}
+            glow={phase === 'speaking' ? 1.1 + audioLevel * 1.6 : phase === 'listening' ? 1.05 + audioLevel * 1.9 : 1}
+            wobble={phase === 'listening' ? 1.0 + audioLevel * 2.2 : 1}
+            hoverIntensity={phase === 'listening' ? 0.35 + audioLevel * 0.5 : 0.35}
+            forceHoverState={phase === 'listening'} 
+          />
           <div className="voice-caption" aria-live="polite">
-            <span key={caption || phase}>{caption || (phase === 'idle' ? 'Click orb or button to speak' : '')}</span>
+            <span key={caption || phase}>{caption || (phase === 'idle' ? 'Press Space or click to speak' : '')}</span>
           </div>
         </div>
       </div>
 
       <footer>
         <button onClick={handleToggleVoice} className="voice-action-btn">
-          {phase === 'listening' ? 'Listening... (Click to cancel)' : phase === 'speaking' ? 'Stop speaking' : phase === 'thinking' ? 'Thinking...' : 'Speak to Yomi'}
+          {phase === 'listening' 
+            ? 'Stop listening' 
+            : phase === 'speaking' 
+            ? 'Interrupt & Speak (Space)' 
+            : phase === 'thinking' 
+            ? 'Thinking...' 
+            : 'Speak to Yomi (Space)'}
         </button>
       </footer>
     </section>

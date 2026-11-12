@@ -201,5 +201,29 @@ class TestYomiAuditRepairs(unittest.TestCase):
         updated2 = db.toggle_task(task_id)
         self.assertEqual(updated2["is_completed"], 0)
 
+    def test_clean_speech_text_strips_markdown_and_links(self):
+        """Verify speech text cleaning removes markdown artifacts for clean vocalization."""
+        from voice_engine import clean_speech_text
+        raw = "Review **Tokyo Tech** at [portal](https://titech.ac.jp) with `code`."
+        cleaned = clean_speech_text(raw)
+        self.assertNotIn("**", cleaned)
+        self.assertNotIn("https://", cleaned)
+        self.assertNotIn("`", cleaned)
+        self.assertIn("Tokyo Tech", cleaned)
+        self.assertIn("portal", cleaned)
+
+    def test_voice_stream_chunks_generator(self):
+        """Verify stream_speech_chunks returns audio bytes chunks."""
+        from voice_engine import stream_speech_chunks
+        async def run():
+            chunks = []
+            async for chunk in stream_speech_chunks("Speech test."):
+                chunks.append(chunk)
+            return chunks
+        chunks = asyncio.run(run())
+        self.assertGreater(len(chunks), 0)
+        total_bytes = sum(len(c) for c in chunks)
+        self.assertGreater(total_bytes, 100)
+
 if __name__ == "__main__":
     unittest.main()

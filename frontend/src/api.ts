@@ -129,6 +129,10 @@ export async function syncAdmissionsPipeline(): Promise<any> {
   }
 }
 
+export function getStreamingVoiceUrl(message: string): string {
+  return `${API_BASE}/api/tts/stream?text=${encodeURIComponent(message)}`;
+}
+
 export async function synthesizeVoice(message: string): Promise<string | null> {
   try {
     const res = await fetch(`${API_BASE}/api/tts`, {
