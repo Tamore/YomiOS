@@ -7,10 +7,22 @@ export default function TrailGrid() {
     const host = canvas?.parentElement;
     const ctx = canvas?.getContext('2d');
     if (!host || !canvas || !ctx) return;
-    const wordmark = host.querySelector<HTMLImageElement>('.voice-stage img');
+    const stage = host.querySelector('.voice-stage');
     const size = 44;
     const cells = new Map<string, { x: number; y: number; time: number; strength: number }>();
+    const tile = document.createElement('canvas');
+    tile.width = tile.height = size;
+    const tileContext = tile.getContext('2d')!;
+    tileContext.fillStyle = '#37333e8a';
+    tileContext.fillRect(0, 0, size, 1);
+    tileContext.fillRect(0, 1, 1, size - 1);
+    const gridPattern = ctx.createPattern(tile, 'repeat')!;
     let frame = 0;
+    let animateUntil = 0;
+    const refresh = () => {
+      animateUntil = performance.now() + 800;
+      if (!frame) frame = requestAnimationFrame(paint);
+    };
     let previous: [number, number] | undefined;
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const resize = () => {
@@ -18,10 +30,13 @@ export default function TrailGrid() {
       canvas.width = Math.round(host.clientWidth * ratio);
       canvas.height = Math.round(host.clientHeight * ratio);
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      refresh();
     };
     const paint = (now: number) => {
       frame = 0;
       ctx.clearRect(0, 0, host.clientWidth, host.clientHeight);
+      ctx.fillStyle = gridPattern;
+      ctx.fillRect(0, 0, host.clientWidth, host.clientHeight);
       for (const [key, cell] of cells) {
         const age = Math.max(0, now - cell.time);
         const alpha = Math.max(0, 1 - age / 1650) ** 1.4 * cell.strength;
@@ -31,18 +46,20 @@ export default function TrailGrid() {
         ctx.fillRect(cell.x * size, cell.y * size, size, size);
         ctx.strokeRect(cell.x * size + .5, cell.y * size + .5, size-1, size-1);
       }
-      if (wordmark?.complete && wordmark.naturalWidth && !host.classList.contains('awake')) {
-        const mark = wordmark.getBoundingClientRect();
+      for (const element of stage?.querySelectorAll('img, .voice-caption span') ?? []) {
+        if (getComputedStyle(element).opacity === '0') continue;
+        const mark = element.getBoundingClientRect();
+        if (!mark.width || !mark.height) continue;
         const grid = canvas.getBoundingClientRect();
         const padding = 6;
-        // Clear complete trail cells near the wordmark so no partial square edges remain.
+        // Clear complete trail cells around visible foreground content so no partial square edges remain.
         const left = Math.floor((mark.left - grid.left - padding) / size) * size;
         const top = Math.floor((mark.top - grid.top - padding) / size) * size;
         const right = Math.ceil((mark.right - grid.left + padding) / size) * size;
         const bottom = Math.ceil((mark.bottom - grid.top + padding) / size) * size;
         ctx.clearRect(left, top, right - left, bottom - top);
       }
-      if (cells.size) frame = requestAnimationFrame(paint);
+      if (cells.size || now < animateUntil) frame = requestAnimationFrame(paint);
     };
     const move = (event: PointerEvent) => {
       if (event.pointerType === 'touch' || motion.matches) return;
@@ -69,9 +86,15 @@ export default function TrailGrid() {
     resize();
     const observer=new ResizeObserver(resize);
     observer.observe(host);
+    if (stage) observer.observe(stage);
+    const caption = stage?.querySelector('.voice-caption');
+    if (caption) observer.observe(caption);
+    const changes = new MutationObserver(refresh);
+    changes.observe(host, { attributes: true, attributeFilter: ['class'] });
+    if (caption) changes.observe(caption, { subtree: true, childList: true, characterData: true });
     host.addEventListener('pointermove',move);
     host.addEventListener('pointerleave',leave);
-    return ()=>{observer.disconnect();cancelAnimationFrame(frame);host.removeEventListener('pointermove',move);host.removeEventListener('pointerleave',leave);};
+    return ()=>{changes.disconnect();observer.disconnect();cancelAnimationFrame(frame);host.removeEventListener('pointermove',move);host.removeEventListener('pointerleave',leave);};
   }, []);
   return <canvas className="voice-trail-grid" ref={ref} aria-hidden="true" />;
 }

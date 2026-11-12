@@ -201,5 +201,55 @@ class TestYomiAuditRepairs(unittest.TestCase):
         updated2 = db.toggle_task(task_id)
         self.assertEqual(updated2["is_completed"], 0)
 
+    def test_clean_speech_text_strips_markdown_and_links(self):
+        """Verify speech text cleaning removes markdown artifacts for clean vocalization."""
+        from voice_engine import clean_speech_text
+        raw = "Review **Tokyo Tech** at [portal](https://titech.ac.jp) with `code`."
+        cleaned = clean_speech_text(raw)
+        self.assertNotIn("**", cleaned)
+        self.assertNotIn("https://", cleaned)
+        self.assertNotIn("`", cleaned)
+        self.assertIn("Tokyo Tech", cleaned)
+        self.assertIn("portal", cleaned)
+
+    def test_voice_stream_chunks_generator(self):
+        from voice_engine import stream_speech_chunks
+
+        class SpeechSource:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def stream(self):
+                yield {"type": "audio", "data": b"mp3-audio"}
+
+        async def run():
+            return [chunk async for chunk in stream_speech_chunks("Speech test.")]
+
+        with patch("voice_engine.edge_tts.Communicate", SpeechSource):
+            self.assertEqual(asyncio.run(run()), [b"mp3-audio"])
+
+    def test_partial_stream_never_appends_wav(self):
+        from voice_engine import stream_speech_chunks
+
+        class BrokenSource:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def stream(self):
+                yield {"type": "audio", "data": b"mp3"}
+                raise RuntimeError("Network interrupted")
+
+        received = []
+
+        async def run():
+            async for chunk in stream_speech_chunks("Speech test."):
+                received.append(chunk)
+
+        with patch("voice_engine.edge_tts.Communicate", BrokenSource), patch("voice_engine._local_sapi5_synthesize") as fallback:
+            with self.assertRaises(RuntimeError):
+                asyncio.run(run())
+            self.assertEqual(received, [b"mp3"])
+            fallback.assert_not_called()
+
 if __name__ == "__main__":
     unittest.main()

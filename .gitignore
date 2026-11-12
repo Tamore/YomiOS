@@ -48,3 +48,8 @@ MASTER_CONSOLIDATED_RESEARCH_AND_ADMISSIONS_DOSSIER.md
 admissions-dossier.md
 admissions.json
 exports/
+
+# Private workspace folders when configured inside this checkout
+.yomi/
+references/
+documents/

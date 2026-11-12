@@ -576,7 +576,8 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
     # -------------------------------------------------------------
     # 12. UNIFIED LLM REASONING (Ollama / Gemini / Groq with Memory Prompt & Bounded History)
     # -------------------------------------------------------------
-    context_facts = memory.build_context_prompt()
+    from reference_documents import reference_context
+    context_facts = memory.build_context_prompt() + "\n" + reference_context(text)
     recent_chats = memory.get_recent_chat(session_id=session_id, limit=6)
     history_text = "\n".join([f"{c['role'].capitalize()}: {c['content']}" for c in recent_chats])
     

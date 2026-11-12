@@ -129,6 +129,10 @@ export async function syncAdmissionsPipeline(): Promise<any> {
   }
 }
 
+export function getStreamingVoiceUrl(message: string): string {
+  return `${API_BASE}/api/tts/stream?text=${encodeURIComponent(message)}`;
+}
+
 export async function synthesizeVoice(message: string): Promise<string | null> {
   try {
     const res = await fetch(`${API_BASE}/api/tts`, {
@@ -146,3 +150,21 @@ export async function synthesizeVoice(message: string): Promise<string | null> {
 
 
 
+
+
+export async function fetchAcademicDossier() {
+  const response = await fetch(`${API_BASE}/api/memory/all`);
+  if (!response.ok) throw new Error('Dossier request failed');
+  const rows: { key: string; value: string }[] = await response.json();
+  const row = rows.find(item => item.key === 'academic_dossier_fields');
+  if (!row) throw new Error('No dossier imported');
+  return JSON.parse(row.value);
+}
+
+
+export async function referenceRequest(path = '', options?: RequestInit) {
+  const response = await fetch(`${API_BASE}/api/references${path}`, options);
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.detail || 'Document request failed');
+  return data;
+}

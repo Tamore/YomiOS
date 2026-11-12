@@ -11,15 +11,16 @@ import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
 import database as db
 import brain
 import memory
+from reference_documents import router as reference_router
 import meta_agent_factory as maf
-from voice_engine import synthesize_speech
+from voice_engine import synthesize_speech, stream_speech_chunks, DEFAULT_VOICE
 from tools.os_control import get_system_telemetry, get_top_processes
 from tools.admissions_engine import (
     get_target_universities_summary,
@@ -39,6 +40,8 @@ from mcp_connector import mcp_connector
 from config import ALLOWED_ORIGINS, ENABLE_DEV_CODE_RUNNER, validate_workspace_path, validate_safe_url
 
 app = FastAPI(title="Yomi 2.0 Backlit Executive Engine", version="2.0.0")
+
+app.include_router(reference_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -183,6 +186,22 @@ async def tts_endpoint(payload: ChatPayload):
     audio_path = await synthesize_speech(payload.message)
     filename = os.path.basename(audio_path)
     return {"audio_url": f"http://127.0.0.1:8765/audio/{filename}"}
+
+@app.get("/api/tts/stream")
+@app.post("/api/tts/stream")
+async def tts_stream_endpoint(text: Optional[str] = None, payload: Optional[ChatPayload] = None, voice: Optional[str] = None):
+    msg = (payload.message if payload else text) or ""
+    if not msg.strip():
+        raise HTTPException(status_code=400, detail="Text required for TTS stream")
+    v = voice or DEFAULT_VOICE
+    return StreamingResponse(
+        stream_speech_chunks(msg, voice=v),
+        media_type="audio/mpeg",
+        headers={
+            "Cache-Control": "no-cache",
+            "Accept-Ranges": "bytes"
+        }
+    )
 
 # -------------------------------------------------------------
 # Tool Endpoints: Admissions & Lab Matching

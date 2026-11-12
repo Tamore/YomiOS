@@ -1,0 +1,49 @@
+.orb-container {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.orb-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.orb-container:not([data-ready]) .orb-canvas { visibility: hidden; }
+.orb-container:not([data-ready])::before {
+  content: '';
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  background: conic-gradient(from 30deg, #641935, #df759e, #ffe1db, #a23d69, #641935);
+  mask-image: radial-gradient(closest-side, transparent 82%, #0008 91%, black 95%, transparent 100%);
+  animation: yomi-orbit 8s linear infinite;
+}
+@keyframes yomi-orbit { to { transform: rotate(1turn); } }
+@media (prefers-reduced-motion: reduce) {
+  .orb-container:not([data-ready])::before { animation: none; }
+}
+
+/* Animate the ring independently of the wordmark and captions. */
+.voice-stage[data-phase="listening"] .orb-container {
+  animation: yomi-listen 1.6s ease-in-out infinite alternate;
+}
+.voice-stage[data-phase="thinking"] .orb-container {
+  animation: yomi-turn 3.2s linear infinite;
+}
+.voice-stage[data-phase="speaking"] .orb-container:not([data-ready]) {
+  animation: yomi-listen .45s ease-in-out infinite alternate;
+}
+@keyframes yomi-listen {
+  from { transform: scale(.9); }
+  to { transform: scale(1.045); }
+}
+@keyframes yomi-turn { to { transform: rotate(1turn); } }
+@media (prefers-reduced-motion: reduce) {
+  .voice-stage[data-phase] .orb-container { animation: none; }
+}
