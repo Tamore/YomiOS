@@ -117,6 +117,7 @@ export default function App() {
   ]);
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const chatBusy = useRef(false);
   const chatScrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Refresh real integration health
@@ -152,13 +153,13 @@ export default function App() {
 
     // Restore saved chat history for this session
     fetchChatHistory("default").then((history: StoredChatMessage[]) => {
-      if (isMounted && history && history.length > 0) {
+      if (isMounted && !chatBusy.current && history && history.length > 0) {
         const mapped: ChatMessage[] = history.map(h => ({
           id: h.id,
           sender: h.role === "user" ? "user" : "yomi",
           text: h.content,
           timestamp: h.timestamp ? new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently",
-          toolUsed: h.tool_calls || undefined
+          ...(() => { try { const meta=JSON.parse(h.tool_calls || '{}'); return {toolUsed:meta.tool_used,downloadUrl:meta.data?.pdf_download_url,webUrl:meta.data?.web_url}; } catch { return {toolUsed:h.tool_calls || undefined}; } })()
         }));
         setMessages(mapped);
       }
@@ -202,10 +203,11 @@ export default function App() {
 
   const handleSendMessage = async (customPrompt?: string) => {
     const textToSend = customPrompt || input;
-    if (!textToSend.trim() || isProcessing) return;
+    if (!textToSend.trim() || chatBusy.current) return { reply: 'Please wait for the current reply.', error: true };
+    chatBusy.current = true;
 
     const userMsg: ChatMessage = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       sender: 'user',
       text: textToSend,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -218,7 +220,7 @@ export default function App() {
     try {
       const data = await sendChat(textToSend);
       setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
+        id: crypto.randomUUID(),
         sender: 'yomi',
         text: data.reply || "Context indexed.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -232,16 +234,19 @@ export default function App() {
       if (data.data?.task_modified || data.tool_used === "task_manager") {
         await reloadBackendState();
       }
+      return data;
     } catch {
       // Honest error reporting: never fabricate a successful answer when connection fails
       setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
+        id: crypto.randomUUID(),
         sender: 'yomi',
         text: "Connection failed: Could not reach Yomi Engine at 127.0.0.1:8765. Please ensure the backend server is running.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isError: true
       }]);
+      return { reply: "Connection failed. Please check the Yomi backend.", error: true };
     } finally {
+      chatBusy.current = false;
       setIsProcessing(false);
     }
   };
@@ -385,7 +390,7 @@ export default function App() {
                               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/[0.1] transition-all"
                             >
                               <Download className="w-3.5 h-3.5" />
-                              <span>Download Generated PDF Brief</span>
+                              <span>Download PDF</span>
                             </a>
                           </div>
                         )}
@@ -405,7 +410,20 @@ export default function App() {
                           </div>
                         )}
 
-                        <span className="text-[10px] font-mono text-zinc-500 block">{msg.timestamp}</span>
+                        <div className="message-actions">
+                          <span className="text-[10px] font-mono text-zinc-500">{msg.timestamp}</span>
+                          <button onClick={async (e) => { const b=e.currentTarget; try { await navigator.clipboard.writeText(msg.text); b.textContent='Copied'; } catch { b.textContent='Select text to copy'; } }}>Copy</button>
+                          <button onClick={async (e) => {
+                            const b=e.currentTarget; b.disabled=true; b.textContent='Exporting…';
+                            try {
+                              const res=await fetch('http://127.0.0.1:8765/api/documents/pdf', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:msg.text,title:'Yomi notes'})});
+                              if(!res.ok) throw new Error('Export failed');
+                              const data=await res.json();
+                              const a=document.createElement('a'); a.href=data.pdf_download_url; a.download=data.filename; a.click();
+                              b.textContent='PDF saved';
+                            } catch { b.textContent='Retry PDF'; } finally { b.disabled=false; }
+                          }}>Export PDF</button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -441,7 +459,7 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* 1. TOP CHROME & NAVIGATION (Bklit Container & Frame)          */}
       {/* ------------------------------------------------------------- */}
-      {home ? <VoiceHome renderChat={renderChat} panel={isWindowOpen} setPanel={setIsWindowOpen} openDashboard={() => setHome(false)} /> : <>
+      {home ? <VoiceHome onSend={handleSendMessage} renderChat={renderChat} panel={isWindowOpen} setPanel={setIsWindowOpen} openDashboard={() => setHome(false)} /> : <>
       <header className="dashboard-header">
         <button className="dashboard-home" aria-label="Return to Yomi home" title="Yomi home" onClick={() => setHome(true)}>
           <img src={import.meta.env.BASE_URL + 'yomi-symbol.svg'} alt="" width="64" height="64" />

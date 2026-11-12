@@ -35,12 +35,30 @@ from config import validate_workspace_path, validate_safe_url
 SYSTEM_PROMPT = """You are Yomi, an elite, witty, and exceptionally sharp executive AI companion and research chief of staff.
 You assist the candidate with academic research workflows, distributed systems engineering, project execution, and daily focus.
 Tone: Natural, concise, brilliant, slightly playful/witty, zero robotic clichés (never say "How may I assist you today?").
-Keep conversational answers punchy (1-3 sentences maximum). Output clear facts, sharp insights, and proactive steps."""
+Keep conversational answers concise. When transcribing or listing dictated items, preserve every supplied item, quantity and unit; do not invent ingredients or omit items for brevity. PDF export is available through the Export PDF action under each chat message, or the explicit export-this-as-PDF command after the list."""
 
-async def process_intent(user_input: str, session_id: str = "default") -> Dict[str, Any]:
+async def _process_intent(user_input: str, session_id: str = "default") -> Dict[str, Any]:
     text = user_input.strip()
     lower = text.lower()
     
+    # Explicit PDF export: preserve supplied text or the last assistant response.
+    if re.search(r"\b(export|save|download|make|create)\b.*\bpdf\b", lower):
+        from tools.text_export import export_text_pdf
+        supplied = text.split(":", 1)[1].strip() if ":" in text else ""
+        history = memory.get_recent_chat(session_id, limit=12)
+        prior_reference = bool(re.search(r"\b(it|this|that|them|list|ingredients|notes|reply|message|conversation)\b", lower))
+        if not supplied and not prior_reference:
+            return {"reply": "Which text should I export? Use Export PDF under the message, or say export this as PDF after the list.", "tool_used": None}
+        content = supplied or next((m["content"] for m in reversed(history)
+                                    if m["role"] == "assistant" and not m["content"].startswith("PDF saved")), "")
+        if not content:
+            return {"reply": "Please dictate the list first, or say export as PDF followed by a colon and the text.", "tool_used": None}
+        try:
+            exported = export_text_pdf(content)
+            return {"reply": "PDF saved locally. The download link is in our chat.", "tool_used": "text_pdf_export", "data": exported}
+        except ValueError as exc:
+            return {"reply": str(exc), "error": True}
+
     # -------------------------------------------------------------
     # 1. MEMORY ENGINE: Explicit Remember / Recall
     # e.g., "remember that I prefer LaTeX for all math", "what do you remember about me?"
@@ -133,8 +151,6 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
         stage_res = google_workspace.stage_file_to_drive(source_doc, "Research_Documents")
         if not stage_res.get("success"):
             reply = f"Drive staging could not locate source document: {stage_res.get('error')}"
-            memory.append_chat(session_id, "user", text)
-            memory.append_chat(session_id, "assistant", reply, tool_calls="google_drive_sync")
             return {
                 "reply": reply,
                 "tool_used": "google_drive_sync",
@@ -143,8 +159,6 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
             }
         db.add_log("Google Workspace", "Staged document to Google Drive Sync mirror", "DRIVE", "hard-drive")
         reply = f"Staged **{stage_res.get('filename')}** to local Google Drive mirror (`Google_Drive_Sync/Research_Documents`)."
-        memory.append_chat(session_id, "user", text)
-        memory.append_chat(session_id, "assistant", reply, tool_calls="google_drive_sync")
         return {
             "reply": reply,
             "tool_used": "google_drive_sync",
@@ -336,8 +350,6 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
 
         new_t = db.create_task(title=clean_title, priority=pri)
         reply = f"Added task to Yomi matrix: [{new_t['priority']}] **{new_t['title']}** (ID: `{new_t['id']}`)."
-        memory.append_chat(session_id, "user", text)
-        memory.append_chat(session_id, "assistant", reply, tool_calls="task_manager")
         return {
             "reply": reply,
             "tool_used": "task_manager",
@@ -361,8 +373,6 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
             out = res["stdout"].strip() if res["stdout"] else res["stderr"].strip()
             reply = f"Runner executed in {res['execution_time_ms']}ms:\n```\n{out}\n```"
         db.add_log("Code Sandbox", f"Executed Python snippet ({res['execution_time_ms']}ms)", "CODE", "terminal")
-        memory.append_chat(session_id, "user", text)
-        memory.append_chat(session_id, "assistant", reply, tool_calls="code_sandbox")
         return {
             "reply": reply,
             "tool_used": "code_sandbox",
@@ -379,8 +389,6 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
         pdf_data = document_reader.inspect_pdf(pdf_path)
         if pdf_data["success"]:
             reply = f"Extracted **{pdf_data['filename']}** ({pdf_data['total_pages']} pages). Abstract preview:\n\n> {pdf_data['abstract'][:400]}..."
-            memory.append_chat(session_id, "user", text)
-            memory.append_chat(session_id, "assistant", reply, tool_calls="paper_reader")
             return {
                 "reply": reply,
                 "tool_used": "paper_reader",
@@ -388,8 +396,6 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
             }
         else:
             reply = f"Could not inspect PDF: {pdf_data.get('error')}"
-            memory.append_chat(session_id, "user", text)
-            memory.append_chat(session_id, "assistant", reply, tool_calls="paper_reader")
             return {"reply": reply, "tool_used": "paper_reader", "error": pdf_data.get("error")}
 
     # -------------------------------------------------------------
@@ -431,8 +437,6 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
 
         if not validate_safe_url(target_url):
             reply = f"Security restriction: '{target_url}' is not a permitted public web target (internal/private/loopback addresses are blocked)."
-            memory.append_chat(session_id, "user", text)
-            memory.append_chat(session_id, "assistant", reply, tool_calls="web_summarizer")
             return {
                 "reply": reply,
                 "tool_used": "web_summarizer",
@@ -445,8 +449,6 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
             title = summary_res["title"]
             reply = f"Analyzed **{title}**! Extracted key takeaways and exported your formatted briefing to `{filename}`."
             db.add_log("Web Intelligence Briefing", f"Summarized {target_url} into {filename}", "INTELLIGENCE", "file-text")
-            memory.append_chat(session_id, "user", text)
-            memory.append_chat(session_id, "assistant", reply, tool_calls="web_summarizer")
             return {
                 "reply": reply,
                 "tool_used": "web_summarizer",
@@ -454,8 +456,6 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
             }
         except Exception as e:
             reply = f"Attempted to inspect `{target_url}`, but encountered network friction: {str(e)}"
-            memory.append_chat(session_id, "user", text)
-            memory.append_chat(session_id, "assistant", reply, tool_calls="web_summarizer")
             return {
                 "reply": reply,
                 "tool_used": "web_summarizer",
@@ -589,13 +589,11 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
         prompt=text,
         system_prompt=combined_system_prompt,
         temperature=0.7,
-        max_tokens=300
+        max_tokens=1200
     )
 
     if llm_res["success"] and llm_res["content"]:
         # Log conversation to memory
-        memory.append_chat(session_id, "user", text)
-        memory.append_chat(session_id, "assistant", llm_res["content"])
         return {
             "reply": llm_res["content"],
             "tool_used": f"llm_{llm_res['provider']}",
@@ -604,11 +602,16 @@ async def process_intent(user_input: str, session_id: str = "default") -> Dict[s
 
     # Honest failure report when model is offline
     fallback_reply = "Language model is currently offline or unreachable. Please launch your local Ollama daemon ('ollama run qwen2.5:7b') or configure an API key in .env."
-    memory.append_chat(session_id, "user", text)
-    memory.append_chat(session_id, "assistant", fallback_reply)
     return {
         "reply": fallback_reply,
         "tool_used": None,
         "error": True,
         "model_status": "offline"
     }
+
+
+async def process_intent(user_input: str, session_id: str = "default") -> Dict[str, Any]:
+    result = await _process_intent(user_input, session_id)
+    memory.append_chat(session_id, "user", user_input)
+    memory.append_chat(session_id, "assistant", result.get("reply", ""), json.dumps({"tool_used": result.get("tool_used"), "data": result.get("data")}, default=str))
+    return result
