@@ -1,9 +1,8 @@
 import AcademicDossier from './components/AcademicDossier';
 import ReferenceLibrary from './components/ReferenceLibrary';
 import VoiceHome from './VoiceHome';
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { 
-  Activity, GraduationCap, Languages, Layers, 
+import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
+import {
   Send, Volume2, ExternalLink,
   ChevronDown, ChevronLeft, CheckSquare, Square,
   RefreshCw, Search, Download, AlertCircle, Loader2
@@ -33,8 +32,19 @@ interface ChatMessage {
   isError?: boolean;
 }
 
+const dashboardTabs = [
+  ['hud', 'Overview'], ['academics', 'Research'], ['profile', 'About me'],
+  ['milestones', 'Milestones'], ['universities', 'Universities'],
+  ['documents', 'Documents'], ['dojo', 'Japanese'], ['mcp', 'Connections']
+] as const;
+type DashboardTab = typeof dashboardTabs[number][0];
+function currentTab(): DashboardTab {
+  const value = window.location.hash.split('/')[1];
+  return dashboardTabs.find(([key]) => key === value)?.[0] || 'hud';
+}
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'hud' | 'academics' | 'dojo' | 'mcp'>(() => { const tab = window.location.hash.split('/')[1]; return tab === 'academics' || tab === 'dojo' || tab === 'mcp' ? tab : 'hud'; });
+  const [activeTab, setActiveTab] = useState<DashboardTab>(currentTab);
 
   // Sticky Floating Window starts MINIMIZED by default so it never blocks the view
   const [home, setHome] = useState(() => !window.location.hash.includes('dashboard'));
@@ -46,8 +56,7 @@ export default function App() {
   useEffect(() => {
     const handleHash = () => {
       setHome(!window.location.hash.includes('dashboard'));
-      const tab = window.location.hash.split('/')[1];
-      setActiveTab(tab === 'academics' || tab === 'dojo' || tab === 'mcp' ? tab : 'hud');
+      setActiveTab(currentTab());
     };
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
@@ -340,59 +349,111 @@ export default function App() {
     );
   }, []);
 
+  const renderChat = (microphone: ReactNode) => (<section className="bklit-frame home-chat-card">
+              <div className="bklit-frame-panel space-y-6">
+
+                <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
+                  <h2 className="text-lg font-semibold">Chat with Yomi</h2>
+                </div>
+
+                <div ref={chatScrollContainerRef} className="home-chat-history space-y-4 max-h-[380px] overflow-y-auto pr-2 card-scroll">
+                  {messages.map(msg => (
+                    <div key={msg.id} className={`chat-row flex items-start gap-2 ${msg.sender === "user" ? "flex-row-reverse" : ""}`}>
+                      <div className={`w-7 h-7 rounded-lg border flex items-center justify-center text-xs font-mono font-medium shrink-0 ${
+                        msg.isError
+                          ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                          : msg.sender === 'yomi'
+                            ? 'bg-white/[0.06] border-white/[0.08] text-white'
+                            : 'bg-white text-black font-semibold'
+                      }`}>
+                        {msg.isError ? '!' : msg.sender === 'yomi' ? 'Y' : 'U'}
+                      </div>
+                      <div className={`rounded-xl border p-4 text-xs md:text-sm leading-relaxed max-w-3xl space-y-2.5 ${
+                        msg.isError
+                          ? 'border-rose-500/30 bg-rose-950/20 text-rose-200'
+                          : 'border-white/[0.08] bg-[#0c0c0e]'
+                      }`}>
+                        <p className={msg.isError ? "text-rose-200" : "text-zinc-200 whitespace-pre-wrap"}>{msg.text}</p>
+
+                        {/* Direct Download Action Link */}
+                        {msg.downloadUrl && (
+                          <div className="pt-1">
+                            <a
+                              href={msg.downloadUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/[0.1] transition-all"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Download Generated PDF Brief</span>
+                            </a>
+                          </div>
+                        )}
+
+                        {/* Direct Web Compose Link */}
+                        {msg.webUrl && (
+                          <div className="pt-1">
+                            <a
+                              href={msg.webUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/[0.1] transition-all"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>Open Draft in Gmail</span>
+                            </a>
+                          </div>
+                        )}
+
+                        <span className="text-[10px] font-mono text-zinc-500 block">{msg.timestamp}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Integrated Chat Input */}
+                <div className="flex items-center gap-3 p-2 rounded-xl bg-black/40 border border-white/[0.08]">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                    aria-label="Message Yomi" placeholder="Message Yomi…"
+                    className="flex-1 bg-transparent px-3 py-2 text-xs md:text-sm text-white placeholder-zinc-500 focus:outline-none"
+                  />
+                  {microphone}
+                  <button
+                    onClick={() => handleSendMessage()}
+                    disabled={isProcessing}
+                    className="bklit-btn bklit-btn-default flex items-center gap-1.5"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>{isProcessing ? "Processing..." : "Send"}</span>
+                  </button>
+                </div>
+
+              </div>
+            </section>);
+
   return (
     <div className="min-h-screen bg-[#09090b] text-[#f5f5f5] font-sans antialiased p-4 md:p-8 flex flex-col items-center">
       
       {/* ------------------------------------------------------------- */}
       {/* 1. TOP CHROME & NAVIGATION (Bklit Container & Frame)          */}
       {/* ------------------------------------------------------------- */}
-      {home ? <VoiceHome panel={isWindowOpen} setPanel={setIsWindowOpen} openDashboard={() => setHome(false)} /> : <>
+      {home ? <VoiceHome renderChat={renderChat} panel={isWindowOpen} setPanel={setIsWindowOpen} openDashboard={() => setHome(false)} /> : <>
       <header className="dashboard-header">
         <button className="dashboard-home" aria-label="Return to Yomi home" title="Yomi home" onClick={() => setHome(true)}>
           <img src={import.meta.env.BASE_URL + 'yomi-symbol.svg'} alt="" width="64" height="64" />
         </button>
         <nav className="dashboard-nav" aria-label="Dashboard sections">
-              <button 
-                aria-pressed={activeTab === 'hud'}
-                onClick={() => setActiveTab('hud')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
-                  activeTab === 'hud' ? 'bg-white/[0.1] text-white shadow-sm' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <Activity className="w-3.5 h-3.5" />
-                <span>Intelligence HUD</span>
-              </button>
-              <button 
-                aria-pressed={activeTab === 'academics'}
-                onClick={() => setActiveTab('academics')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
-                  activeTab === 'academics' ? 'bg-white/[0.1] text-white shadow-sm' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <GraduationCap className="w-3.5 h-3.5" />
-                <span>Academics & Dossier</span>
-              </button>
-              <button 
-                aria-pressed={activeTab === 'dojo'}
-                onClick={() => setActiveTab('dojo')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
-                  activeTab === 'dojo' ? 'bg-white/[0.1] text-white shadow-sm' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <Languages className="w-3.5 h-3.5" />
-                <span>Nihongo Dojo</span>
-              </button>
-              <button 
-                aria-pressed={activeTab === 'mcp'}
-                onClick={() => setActiveTab('mcp')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
-                  activeTab === 'mcp' ? 'bg-white/[0.1] text-white shadow-sm' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>MCP & Connections</span>
-              </button>
-            </nav>
+          {dashboardTabs.map(([key, label]) => <button key={key}
+            aria-pressed={activeTab === key} onClick={() => setActiveTab(key)}
+            className={activeTab === key ? 'text-white bg-white/10' : 'text-zinc-400'}>{label}</button>)}
+        </nav>
+        <button className="dashboard-refresh" aria-label="Refresh Yomi" onClick={() => window.location.reload()}>
+          <RefreshCw size={16} /> Refresh
+        </button>
 
       </header>
 
@@ -435,6 +496,16 @@ export default function App() {
         {/* ------------------------------------------------------------- */}
         {activeTab === 'hud' && (
           <div className="yomi-tiles tiles-hud">
+            <AcademicDossier compact />
+            <section className="bklit-frame"><div className="bklit-frame-panel space-y-4">
+              <h2 className="text-lg font-bold">Tasks to do</h2>
+              {tasksLoading ? <p>Loading tasks…</p> : tasksError ? <p>{tasksError}</p> :
+                tasks.filter(task => !task.is_completed).slice(0, 6).map(task =>
+                  <p key={task.id} className="text-sm">{task.title}</p>)}
+              {!tasksLoading && !tasksError && !tasks.some(task => !task.is_completed) && <p>No pending tasks.</p>}
+              <button data-pipeline-toggle onClick={() => { setStickyTab('actions'); setIsWindowOpen(true); }}>Open all tasks</button>
+              <p><a href="#dashboard/documents">Upload a reference document</a></p>
+            </div></section>
 
             
             {/* Activity & Habit Heatmap Frame */}
@@ -577,7 +648,7 @@ export default function App() {
                   </div>
                 </div>
             </section>
-            <AcademicDossier compact />
+
             <section className="bklit-frame metric-tile">
 <div className="bklit-frame-panel flex flex-col justify-between h-full space-y-4">
                   <div className="flex items-center justify-between">
@@ -607,91 +678,7 @@ export default function App() {
                 </div>
             </section>
 
-            {/* Conversational Chief of Staff Dialogue Frame */}
-            <section className="bklit-frame">
-              <div className="bklit-frame-panel space-y-6">
-                
-                <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
-                  <h2 className="text-lg font-semibold">Chat with Yomi</h2>
-                </div>
 
-                <div ref={chatScrollContainerRef} className="space-y-4 max-h-[380px] overflow-y-auto pr-2 card-scroll">
-                  {messages.map(msg => (
-                    <div key={msg.id} className={`chat-row flex items-start gap-2 ${msg.sender === "user" ? "flex-row-reverse" : ""}`}>
-                      <div className={`w-7 h-7 rounded-lg border flex items-center justify-center text-xs font-mono font-medium shrink-0 ${
-                        msg.isError 
-                          ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' 
-                          : msg.sender === 'yomi' 
-                            ? 'bg-white/[0.06] border-white/[0.08] text-white' 
-                            : 'bg-white text-black font-semibold'
-                      }`}>
-                        {msg.isError ? '!' : msg.sender === 'yomi' ? 'Y' : 'U'}
-                      </div>
-                      <div className={`rounded-xl border p-4 text-xs md:text-sm leading-relaxed max-w-3xl space-y-2.5 ${
-                        msg.isError 
-                          ? 'border-rose-500/30 bg-rose-950/20 text-rose-200' 
-                          : 'border-white/[0.08] bg-[#0c0c0e]'
-                      }`}>
-                        <p className={msg.isError ? "text-rose-200" : "text-zinc-200 whitespace-pre-wrap"}>{msg.text}</p>
-                        
-                        {/* Direct Download Action Link */}
-                        {msg.downloadUrl && (
-                          <div className="pt-1">
-                            <a 
-                              href={msg.downloadUrl} 
-                              target="_blank" 
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/[0.1] transition-all"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                              <span>Download Generated PDF Brief</span>
-                            </a>
-                          </div>
-                        )}
-
-                        {/* Direct Web Compose Link */}
-                        {msg.webUrl && (
-                          <div className="pt-1">
-                            <a 
-                              href={msg.webUrl} 
-                              target="_blank" 
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/[0.1] transition-all"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                              <span>Open Draft in Gmail</span>
-                            </a>
-                          </div>
-                        )}
-
-                        <span className="text-[10px] font-mono text-zinc-500 block">{msg.timestamp}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Integrated Chat Input */}
-                <div className="flex items-center gap-3 p-2 rounded-xl bg-black/40 border border-white/[0.08]">
-                  <input 
-                    type="text" 
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    placeholder="Message Yomi…" 
-                    className="flex-1 bg-transparent px-3 py-2 text-xs md:text-sm text-white placeholder-zinc-500 focus:outline-none"
-                  />
-                  <button 
-                    onClick={() => handleSendMessage()}
-                    disabled={isProcessing}
-                    className="bklit-btn bklit-btn-default flex items-center gap-1.5"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>{isProcessing ? "Processing..." : "Send"}</span>
-                  </button>
-                </div>
-
-              </div>
-            </section>
 
           </div>
         )}
@@ -699,17 +686,20 @@ export default function App() {
         {/* ------------------------------------------------------------- */}
         {/* VIEW 2: ACADEMICS & DOSSIER                                   */}
         {/* ------------------------------------------------------------- */}
+        {(['profile', 'milestones', 'universities'] as string[]).includes(activeTab) && (
+          <div className="yomi-section-page"><AcademicDossier view={activeTab as 'profile' | 'milestones' | 'universities'} /></div>
+        )}
+        {activeTab === 'documents' && <div className="yomi-section-page"><ReferenceLibrary /></div>}
         {activeTab === 'academics' && (
           <div className="yomi-tiles tiles-academics">
             <div className="border-b border-white/[0.06] pb-5">
-              <h1 className="text-2xl font-bold tracking-tight text-white">Academics & Dossier</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-white">Research</h1>
               <p className="text-xs md:text-sm text-zinc-400 mt-1">
                 Consolidated repository of academic research satellites, proposal tracking, and verified literature briefs.
               </p>
             </div>
 
-            <AcademicDossier />
-            <ReferenceLibrary />
+            <AcademicDossier view="research" />
 
             {/* Live ArXiv Literature Satellite */}
             <section className="bklit-frame">

@@ -1,16 +1,18 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { Mic, Square } from 'lucide-react';
+import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
 import './voice-home.css';
 import Orb from './Orb';
 
 import { sendChat, synthesizeVoice, getStreamingVoiceUrl } from './api';
 
-type Props = { panel: boolean; setPanel: (value: boolean) => void; openDashboard: () => void };
+type Props = { renderChat: (microphone: ReactNode) => ReactNode; panel: boolean; setPanel: (value: boolean) => void; openDashboard: () => void };
 type SpeechResult = { 0: { transcript: string }; isFinal: boolean };
 type Phase = 'idle' | 'listening' | 'thinking' | 'speaking' | 'quiet';
 
 const rosePalette = ['#e77ca5', '#ffe1db', '#76183c'];
 
-export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
+export default function VoiceHome({ renderChat, panel, setPanel, openDashboard }: Props) {
+  const [chatting, setChatting] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [caption, setCaption] = useState<string>('');
   const [audioLevel, setAudioLevel] = useState<number>(0);
@@ -387,11 +389,12 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
   }, [handleToggleVoice]);
 
   return (
-    <section className={`voice-home ${phase === 'idle' ? '' : 'awake'} ${panel ? 'with-panel' : ''}`}>
+    <section className={`voice-home ${chatting ? 'is-chatting' : ''} ${phase === 'idle' ? '' : 'awake'} ${panel ? 'with-panel' : ''}`}>
 
       <header>
         <img src={import.meta.env.BASE_URL + 'yomi-symbol.svg'} alt="Yomi" width="32" height="32" />
         <nav>
+          {chatting && <button onClick={() => setChatting(false)}>Voice view</button>}
           <button onClick={openDashboard}>Dashboard</button>
           <button
             data-pipeline-toggle
@@ -429,17 +432,15 @@ export default function VoiceHome({ panel, setPanel, openDashboard }: Props) {
         </div>
       </div>
 
-      <footer>
-        <button onClick={handleToggleVoice} className="voice-action-btn">
-          {phase === 'listening' 
-            ? 'Stop listening' 
-            : phase === 'speaking' 
-            ? 'Interrupt & Speak (Space)' 
-            : phase === 'thinking' 
-            ? 'Thinking...' 
-            : 'Speak to Yomi (Space)'}
-        </button>
-      </footer>
+      <div className="home-chat" onFocusCapture={() => setChatting(true)}>
+
+        {renderChat(<button aria-label={phase === 'listening' ? 'Stop microphone' : 'Speak to Yomi'}
+          aria-pressed={phase === 'listening'} disabled={phase === 'thinking'}
+          onClick={handleToggleVoice} className="chat-microphone">
+          {phase === 'listening' ? <Square size={18} /> : <Mic size={18} />}
+        </button>)}
+      </div>
+
     </section>
   );
 }
