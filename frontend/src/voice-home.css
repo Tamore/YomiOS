@@ -59,3 +59,8 @@
 .home-chat-card>.bklit-frame-panel>div{margin-top:0!important;margin-bottom:0!important}
 .voice-home:not(.is-chatting) .home-chat-card>.bklit-frame-panel{padding:10px!important}
 .is-chatting .home-chat-card{min-height:0}
+
+.voice-home .orb-activation{position:absolute;inset:0;border:0;padding:0;background:transparent;border-radius:50%;pointer-events:auto}
+.voice-caption{pointer-events:auto;user-select:text;cursor:text}
+.message-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.voice-home .message-actions button{font-size:11px;padding:4px 7px}

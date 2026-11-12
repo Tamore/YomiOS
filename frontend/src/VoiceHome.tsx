@@ -3,15 +3,17 @@ import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react'
 import './voice-home.css';
 import Orb from './Orb';
 
-import { sendChat, synthesizeVoice, getStreamingVoiceUrl } from './api';
+import { synthesizeVoice, getStreamingVoiceUrl } from './api';
 
-type Props = { renderChat: (microphone: ReactNode) => ReactNode; panel: boolean; setPanel: (value: boolean) => void; openDashboard: () => void };
+type Props = { onSend: (text: string) => Promise<any>; renderChat: (microphone: ReactNode) => ReactNode; panel: boolean; setPanel: (value: boolean) => void; openDashboard: () => void };
 type SpeechResult = { 0: { transcript: string }; isFinal: boolean };
 type Phase = 'idle' | 'listening' | 'thinking' | 'speaking' | 'quiet';
 
 const rosePalette = ['#e77ca5', '#ffe1db', '#76183c'];
 
-export default function VoiceHome({ renderChat, panel, setPanel, openDashboard }: Props) {
+export default function VoiceHome({ onSend, renderChat, panel, setPanel, openDashboard }: Props) {
+  const sendRef = useRef(onSend);
+  sendRef.current = onSend;
   const [chatting, setChatting] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [caption, setCaption] = useState<string>('');
@@ -142,8 +144,8 @@ export default function VoiceHome({ renderChat, panel, setPanel, openDashboard }
 
     try {
       // 1. Process intent with Yomi Brain
-      const chatRes = await sendChat(text, 'voice-session');
-      const reply = chatRes.reply || "I've synchronized your academic and research satellite.";
+      const chatRes = await sendRef.current(text);
+      const reply = chatRes.reply || "No reply was returned.";
 
       if (id !== playbackId.current) return;
       setCaption(`“${reply}”`);
@@ -411,12 +413,11 @@ export default function VoiceHome({ renderChat, panel, setPanel, openDashboard }
 
       <div 
         className="voice-center" 
-        style={{ pointerEvents: 'auto', cursor: 'pointer' }} 
-        onClick={handleToggleVoice}
+        style={{ pointerEvents: 'none' }}
       >
         <div className="voice-stage" data-phase={phase}>
           <img src={import.meta.env.BASE_URL + 'yomi-wordmark.svg'} alt="Yomi" />
-          <Orb 
+          <button className="orb-activation" aria-label="Toggle voice listening" onClick={handleToggleVoice}><Orb
             colors={rosePalette} 
             backgroundColor="#100c0e" 
             speed={phase === 'thinking' ? 1.85 : phase === 'listening' ? 1.1 + audioLevel * 1.2 : 1} 
@@ -425,14 +426,14 @@ export default function VoiceHome({ renderChat, panel, setPanel, openDashboard }
             wobble={phase === 'listening' ? 1.0 + audioLevel * 2.2 : 1}
             hoverIntensity={phase === 'listening' ? 0.35 + audioLevel * 0.5 : 0.35}
             forceHoverState={phase === 'listening'} 
-          />
+          /></button>
           <div className="voice-caption" aria-live="polite">
             <span key={caption || phase}>{caption}</span>
           </div>
         </div>
       </div>
 
-      <div className="home-chat" onFocusCapture={() => setChatting(true)}>
+      <div className="home-chat" onFocusCapture={(e) => { if (e.target instanceof HTMLInputElement) setChatting(true); }}>
 
         {renderChat(<button aria-label={phase === 'listening' ? 'Stop microphone' : 'Speak to Yomi'}
           aria-pressed={phase === 'listening'} disabled={phase === 'thinking'}

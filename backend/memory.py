@@ -117,7 +117,7 @@ def get_session_chat_history(session_id: str = "default", limit: int = 50) -> Li
             SELECT id, session_id, role, content, tool_calls, created_at
             FROM conversation_history
             WHERE session_id = ?
-            ORDER BY id ASC LIMIT ?
+            ORDER BY id DESC LIMIT ?
         """, (session_id, limit))
         rows = cursor.fetchall()
         return [
@@ -128,7 +128,7 @@ def get_session_chat_history(session_id: str = "default", limit: int = 50) -> Li
                 "tool_calls": r["tool_calls"],
                 "timestamp": str(r["created_at"])
             }
-            for r in rows
+            for r in reversed(rows)
         ]
 
 # Initialize on module load

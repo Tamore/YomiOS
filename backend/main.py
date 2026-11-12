@@ -401,6 +401,18 @@ async def toggle_task_endpoint(task_id: str):
     await broadcast_state()
     return task
 
+class TextExportPayload(BaseModel):
+    content: str
+    title: str = "Yomi notes"
+
+@app.post("/api/documents/pdf")
+def export_document_pdf(payload: TextExportPayload):
+    from tools.text_export import export_text_pdf
+    try:
+        return export_text_pdf(payload.content, payload.title)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
 @app.get("/api/exports/{filename}")
 async def download_export(filename: str):
     file_path = os.path.join(EXPORTS_DIR, filename)
