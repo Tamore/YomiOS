@@ -32,3 +32,30 @@
 @keyframes yomi-summon{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
 @media(max-width:700px){.with-panel .voice-center{transform:translateY(-15vh)}.voice-tracker:not([hidden]){top:auto;bottom:14%;--tracker-height:36dvh}}
 @media(prefers-reduced-motion:reduce){.voice-home *,.voice-tracker{animation-duration:.001ms!important;animation-iteration-count:1!important;transition:none!important}}
+
+.home-chat{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);width:min(760px,92vw);z-index:2}
+.home-chat-card{border-radius:20px!important}
+.home-chat-card>.bklit-frame-panel{padding:12px!important}
+.voice-home:not(.is-chatting) .home-chat-history,
+.voice-home:not(.is-chatting) .home-chat-card>.bklit-frame-panel>div:first-child{display:none}
+.home-chat input{min-width:0}
+.voice-home .voice-center{inset:10% 0 24%}
+.is-chatting .voice-center{left:0;right:auto;width:29%;bottom:25%;top:20%;transform:none}
+.is-chatting .voice-stage{width:min(230px,23vw)}
+.is-chatting .voice-caption{width:25vw;font-size:13px;max-height:20vh}
+.is-chatting .home-chat{left:auto;right:5%;transform:none;width:62%;top:105px;bottom:25px}
+.is-chatting .home-chat-card,.is-chatting .home-chat-card>.bklit-frame-panel{height:100%}
+.is-chatting .home-chat-card>.bklit-frame-panel{display:flex;flex-direction:column;gap:12px;padding:20px!important}
+.is-chatting .home-chat-history{flex:1;max-height:none;min-height:0}
+@media(max-width:700px){
+ .is-chatting .voice-center{top:72px;left:12px;width:80px;height:80px;bottom:auto}
+ .is-chatting .voice-stage{width:80px}
+ .is-chatting .voice-caption{display:none}
+ .is-chatting .home-chat{top:165px;right:4%;width:92%;bottom:16px}
+ .home-chat-card .chat-row>div:last-child{max-width:85%}
+}
+/* Keep the composer compact without inherited vertical margins. */
+.home-chat{display:flex;flex-direction:column;gap:14px}
+.home-chat-card>.bklit-frame-panel>div{margin-top:0!important;margin-bottom:0!important}
+.voice-home:not(.is-chatting) .home-chat-card>.bklit-frame-panel{padding:10px!important}
+.is-chatting .home-chat-card{min-height:0}
