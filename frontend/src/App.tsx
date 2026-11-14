@@ -734,14 +734,14 @@ export default function App() {
                     <h2 className="text-base font-semibold text-white">ArXiv Literature Satellite</h2>
                     <p className="text-xs text-zinc-400">Live search across ArXiv repository with instant PDF brief compilation.</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex max-w-full items-center gap-2">
                     <input 
                       type="text" 
                       value={researchQuery}
                       onChange={(e) => setResearchQuery(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleExecuteResearchSearch()}
                       placeholder="Search ArXiv papers..."
-                      className="px-3 py-1.5 rounded-lg text-xs bg-black/40 border border-white/[0.08] text-white w-64 focus:outline-none"
+                      className="px-3 py-1.5 rounded-lg text-xs bg-black/40 border border-white/[0.08] text-white w-64 min-w-0"
                     />
                     <button 
                       onClick={handleExecuteResearchSearch}
