@@ -1,4 +1,8 @@
 import asyncio
+import io
+import wave
+import hashlib
+from threading import Lock
 import os
 import re
 from typing import AsyncIterator
@@ -9,6 +13,26 @@ AUDIO_CACHE_DIR = WORKSPACE_ROOT / "cache" / "audio"
 os.makedirs(AUDIO_CACHE_DIR, exist_ok=True)
 
 DEFAULT_VOICE = "en-US-AriaNeural"
+
+_ja_lock = Lock()
+
+
+def japanese_reply(text: str) -> bool:
+    return bool(re.search(r"[ぁ-ヿ]", text) or
+                (re.search(r"[一-龯]", text) and not re.search(r"[a-zA-Z]", text)))
+
+
+def japanese_audio(text: str) -> bytes:
+    import numpy as np
+    import pyopenjtalk
+    with _ja_lock:
+        samples, rate = pyopenjtalk.tts(clean_speech_text(text))
+    output = io.BytesIO()
+    with wave.open(output, "wb") as wav:
+        wav.setparams((1, 2, rate, 0, "NONE", ""))
+        wav.writeframes(np.clip(samples, -32768, 32767).astype("<i2").tobytes())
+    return output.getvalue()
+
 
 def clean_speech_text(text: str) -> str:
     """Prepares natural, pronounceable text for speech synthesis by stripping markdown syntax."""
@@ -42,6 +66,13 @@ async def synthesize_speech(text: str, voice: str = DEFAULT_VOICE) -> str:
     if not clean:
         clean = "I have processed your request."
     
+    if japanese_reply(clean) and voice == DEFAULT_VOICE:
+        path = AUDIO_CACHE_DIR / ("ja_" + hashlib.sha256(clean.encode()).hexdigest() + ".wav")
+        if not path.is_file():
+            audio = await asyncio.to_thread(japanese_audio, clean)
+            path.write_bytes(audio)
+        return str(path)
+
     # Cap single speech burst
     speech_text = clean[:400] if len(clean) > 400 else clean
     hash_key = abs(hash(speech_text)) % 1000000

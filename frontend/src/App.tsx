@@ -1,3 +1,4 @@
+import Notes from './components/Notes';
 import AcademicDossier from './components/AcademicDossier';
 import ReferenceLibrary from './components/ReferenceLibrary';
 import VoiceHome from './VoiceHome';
@@ -35,7 +36,7 @@ interface ChatMessage {
 const dashboardTabs = [
   ['hud', 'Overview'], ['academics', 'Research'], ['profile', 'About me'],
   ['milestones', 'Milestones'], ['universities', 'Universities'],
-  ['documents', 'Documents'], ['dojo', 'Japanese'], ['mcp', 'Connections']
+  ['notes', 'Notes'], ['documents', 'Documents'], ['dojo', 'Japanese'], ['mcp', 'Connections']
 ] as const;
 type DashboardTab = typeof dashboardTabs[number][0];
 function currentTab(): DashboardTab {
@@ -412,6 +413,11 @@ export default function App() {
 
                         <div className="message-actions">
                           <span className="text-[10px] font-mono text-zinc-500">{msg.timestamp}</span>
+                          <button onClick={async (e) => {
+                            const b=e.currentTarget;b.disabled=true;b.textContent='Saving…';
+                            try {const res=await fetch('http://127.0.0.1:8765/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'Saved from chat',content:msg.text})});if(!res.ok)throw new Error();b.textContent='Saved to Notes';}
+                            catch{b.textContent='Retry save';b.disabled=false;}
+                          }}>Save to notes</button>
                           <button onClick={async (e) => { const b=e.currentTarget; try { await navigator.clipboard.writeText(msg.text); b.textContent='Copied'; } catch { b.textContent='Select text to copy'; } }}>Copy</button>
                           <button onClick={async (e) => {
                             const b=e.currentTarget; b.disabled=true; b.textContent='Exporting…';
@@ -707,6 +713,7 @@ export default function App() {
         {(['profile', 'milestones', 'universities'] as string[]).includes(activeTab) && (
           <div className="yomi-section-page"><AcademicDossier view={activeTab as 'profile' | 'milestones' | 'universities'} /></div>
         )}
+        {activeTab === 'notes' && <div className="yomi-section-page"><Notes /></div>}
         {activeTab === 'documents' && <div className="yomi-section-page"><ReferenceLibrary /></div>}
         {activeTab === 'academics' && (
           <div className="yomi-tiles tiles-academics">
@@ -727,14 +734,14 @@ export default function App() {
                     <h2 className="text-base font-semibold text-white">ArXiv Literature Satellite</h2>
                     <p className="text-xs text-zinc-400">Live search across ArXiv repository with instant PDF brief compilation.</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex max-w-full items-center gap-2">
                     <input 
                       type="text" 
                       value={researchQuery}
                       onChange={(e) => setResearchQuery(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleExecuteResearchSearch()}
                       placeholder="Search ArXiv papers..."
-                      className="px-3 py-1.5 rounded-lg text-xs bg-black/40 border border-white/[0.08] text-white w-64 focus:outline-none"
+                      className="px-3 py-1.5 rounded-lg text-xs bg-black/40 border border-white/[0.08] text-white w-64 min-w-0"
                     />
                     <button 
                       onClick={handleExecuteResearchSearch}
