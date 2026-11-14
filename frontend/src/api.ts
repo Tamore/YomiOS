@@ -168,3 +168,11 @@ export async function referenceRequest(path = '', options?: RequestInit) {
   if (!response.ok) throw new Error(data.detail || 'Document request failed');
   return data;
 }
+
+export async function transcribeRecording(pcm: ArrayBuffer, signal: AbortSignal): Promise<string> {
+  const response = await fetch(API_BASE + '/api/voice/transcribe', {
+    method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: pcm, signal,
+  });
+  if (!response.ok) throw new Error((await response.json()).detail || 'Local transcription failed');
+  return (await response.json()).text;
+}

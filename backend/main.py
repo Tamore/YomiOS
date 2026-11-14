@@ -11,7 +11,7 @@ import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, Response
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
@@ -20,7 +20,7 @@ import brain
 import memory
 from reference_documents import router as reference_router
 import meta_agent_factory as maf
-from voice_engine import synthesize_speech, stream_speech_chunks, DEFAULT_VOICE
+from voice_engine import japanese_reply, japanese_audio, synthesize_speech, stream_speech_chunks, DEFAULT_VOICE
 from tools.os_control import get_system_telemetry, get_top_processes
 from tools.admissions_engine import (
     get_target_universities_summary,
@@ -41,7 +41,11 @@ from config import ALLOWED_ORIGINS, ENABLE_DEV_CODE_RUNNER, validate_workspace_p
 
 app = FastAPI(title="Yomi 2.0 Backlit Executive Engine", version="2.0.0")
 
+from local_speech import router as speech_router
+app.include_router(speech_router)
 app.include_router(reference_router)
+from notes import router as notes_router
+app.include_router(notes_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -193,6 +197,8 @@ async def tts_stream_endpoint(text: Optional[str] = None, payload: Optional[Chat
     msg = (payload.message if payload else text) or ""
     if not msg.strip():
         raise HTTPException(status_code=400, detail="Text required for TTS stream")
+    if not voice and japanese_reply(msg):
+        return Response(await asyncio.to_thread(japanese_audio, msg), media_type='audio/wav')
     v = voice or DEFAULT_VOICE
     return StreamingResponse(
         stream_speech_chunks(msg, voice=v),

@@ -8,11 +8,12 @@ export default function ReferenceLibrary() {
   const reload = async () => setDocs(await referenceRequest());
   useEffect(() => { reload().catch(() => setMessage('Unable to load documents.')); }, []);
   async function upload(files: FileList | null) {
-    if (!files) return;
+    if (!files?.length || busy) return;
+    const batch = Array.from(files);
     setBusy(true);
     setMessage('');
     try {
-      for (const file of Array.from(files)) {
+      for (const file of batch) {
         if (file.size > 20 * 1024 * 1024) throw new Error('Maximum file size is 20 MB.');
         await referenceRequest('', { method: 'POST', headers: { 'X-File-Name': encodeURIComponent(file.name) }, body: file });
       }
@@ -29,9 +30,10 @@ export default function ReferenceLibrary() {
     } catch (error) { setMessage(String(error)); }
     finally { setBusy(false); }
   }
-  return <section className="bklit-frame"><div className="bklit-frame-panel space-y-4">
+  return <section className="bklit-frame" onDragOver={event => event.preventDefault()}
+    onDrop={event => { event.preventDefault(); void upload(event.dataTransfer.files); }}><div className="bklit-frame-panel space-y-4">
     <h2 className="text-lg font-bold">Reference library</h2>
-    <p className="text-sm text-zinc-400">Upload PDF, DOCX, TXT or Markdown, up to 20 MB. Selected documents provide excerpts for chat and voice answers. Their content may be sent to your configured AI provider.</p>
+    <p className="text-sm text-zinc-400">Drop files here or choose PDF, DOCX, TXT or Markdown. Up to 20 MB each, or 300 pages per PDF. Selected documents provide excerpts for chat and voice answers. Their content may be sent to your configured AI provider.</p>
     <input aria-label="Upload reference documents" type="file" multiple accept=".pdf,.docx,.txt,.md" disabled={busy}
       onChange={event => { void upload(event.target.files); event.target.value = ''; }} />
     {message && <p role="status" className="text-sm">{message}</p>}

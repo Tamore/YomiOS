@@ -2,11 +2,11 @@ import { Mic, Square } from 'lucide-react';
 import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
 import './voice-home.css';
 import Orb from './Orb';
+import { listenLocally } from './localListening';
 
 import { synthesizeVoice, getStreamingVoiceUrl } from './api';
 
 type Props = { onSend: (text: string) => Promise<any>; renderChat: (microphone: ReactNode) => ReactNode; panel: boolean; setPanel: (value: boolean) => void; openDashboard: () => void };
-type SpeechResult = { 0: { transcript: string }; isFinal: boolean };
 type Phase = 'idle' | 'listening' | 'thinking' | 'speaking' | 'quiet';
 
 const rosePalette = ['#e77ca5', '#ffe1db', '#76183c'];
@@ -29,27 +29,6 @@ export default function VoiceHome({ onSend, renderChat, panel, setPanel, openDas
   const animFrameRef = useRef<number>(0);
   const manuallyToggled = useRef(false);
 
-  // Microphone analyser for live animation while listening
-  const micGeneration = useRef(0);
-  const micStreamRef = useRef<MediaStream | null>(null);
-  const micSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const micAnalyserRef = useRef<AnalyserNode | null>(null);
-
-  // Cleanup helper for microphone hardware resources
-  const stopMicAnalysis = useCallback(() => {
-    micGeneration.current++;
-    cancelAnimationFrame(animFrameRef.current);
-    if (micStreamRef.current) {
-      micStreamRef.current.getTracks().forEach(track => track.stop());
-      micStreamRef.current = null;
-    }
-    if (micSourceRef.current) {
-      try { micSourceRef.current.disconnect(); } catch { /* Ignore */ }
-      micSourceRef.current = null;
-    }
-    micAnalyserRef.current = null;
-  }, []);
-
   // Cleanup all audio and recognition on unmount
   useEffect(() => {
     return () => {
@@ -59,7 +38,6 @@ export default function VoiceHome({ onSend, renderChat, panel, setPanel, openDas
         recognitionRef.current = null;
         try { recognition.abort(); } catch { /* Ignore */ }
       }
-      stopMicAnalysis();
       window.speechSynthesis?.cancel();
       if (audioRef.current) {
         audioRef.current.pause();
@@ -70,58 +48,10 @@ export default function VoiceHome({ onSend, renderChat, panel, setPanel, openDas
       }
       void audioContextRef.current?.close();
     };
-  }, [stopMicAnalysis]);
-
-  // Start live microphone stream and FFT analysis for WebGL Orb during listening
-  const startMicAnalysis = useCallback(async () => {
-    const generation = ++micGeneration.current;
-    try {
-      const ctx = audioContextRef.current ?? new AudioContext();
-      audioContextRef.current = ctx;
-      if (ctx.state === 'suspended') {
-        await ctx.resume().catch(() => {});
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        }
-      });
-      if (generation !== micGeneration.current) {
-        stream.getTracks().forEach(track => track.stop());
-        return;
-      }
-      micStreamRef.current = stream;
-
-      const source = ctx.createMediaStreamSource(stream);
-      micSourceRef.current = source;
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 64;
-      analyser.smoothingTimeConstant = 0.55;
-      source.connect(analyser);
-      micAnalyserRef.current = analyser;
-
-      const levels = new Uint8Array(analyser.frequencyBinCount);
-      const measureMic = () => {
-        if (phaseRef.current !== 'listening' || !micAnalyserRef.current) return;
-        analyser.getByteFrequencyData(levels);
-        let sum = 0;
-        for (let i = 0; i < levels.length; i++) sum += levels[i];
-        const normalized = sum / levels.length / 255;
-        setAudioLevel(normalized);
-        animFrameRef.current = requestAnimationFrame(measureMic);
-      };
-      animFrameRef.current = requestAnimationFrame(measureMic);
-    } catch (err) {
-      console.warn('Microphone stream access unavailable for live FFT:', err);
-    }
   }, []);
 
   // Forward declarations for voice processing and state management
   const processVoiceQuery = useCallback(async (text: string) => {
-    stopMicAnalysis();
     if (!text.trim()) {
       setPhase('idle');
       setCaption('');
@@ -167,6 +97,7 @@ export default function VoiceHome({ onSend, renderChat, panel, setPanel, openDas
           return;
         }
         const utterance = new SpeechSynthesisUtterance(reply);
+        utterance.lang = /[ぁ-ヿ]/u.test(reply) || (/[一-龯]/u.test(reply) && !/[a-z]/i.test(reply)) ? 'ja-JP' : 'en-US';
         utterance.onstart = () => { if (id === playbackId.current) setPhase('speaking'); };
         utterance.onend = finishSpeech;
         utterance.onerror = () => {
@@ -258,7 +189,7 @@ export default function VoiceHome({ onSend, renderChat, panel, setPanel, openDas
       setPhase('idle');
       setAudioLevel(0);
     }
-  }, [setPanel, stopMicAnalysis]);
+  }, [setPanel]);
 
   // Activate microphone listening with SpeechRecognition & live FFT
   const startListening = useCallback(() => {
@@ -272,70 +203,28 @@ export default function VoiceHome({ onSend, renderChat, panel, setPanel, openDas
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     setAudioLevel(0);
 
-    const Recognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (Recognition) {
-      const recognition = new Recognition();
-      recognitionRef.current = recognition;
-      recognition.lang = 'en-US';
-      recognition.interimResults = true;
-      recognition.continuous = false;
-
-      recognition.onstart = () => {
-        if (recognitionRef.current !== recognition) return;
-        setPhase('listening');
-        setCaption('Listening…');
-        void startMicAnalysis();
-      };
-
-      recognition.onresult = (event: any) => {
-        if (recognitionRef.current !== recognition) return;
-        const results = Array.from(event.results) as SpeechResult[];
-        const transcript = results.map(result => result[0].transcript).join(' ').trim();
-        if (!transcript) return;
-        setCaption(`“${transcript}”`);
-        if (results.some(result => result.isFinal)) {
-          recognitionRef.current = null;
-          recognition.stop();
-          stopMicAnalysis();
-          void processVoiceQuery(transcript);
+    setPhase('listening');
+    setCaption('Listening…');
+    recognitionRef.current = listenLocally(setAudioLevel,
+      () => setCaption('Transcribing…'),
+      text => {
+        recognitionRef.current = null;
+        // Auto-detection can turn a clipped utterance into an isolated Korean syllable.
+        if (!text.trim() || /^[\s\p{P}\p{Script=Hangul}]+$/u.test(text)) {
+          setPhase('idle');
+          setAudioLevel(0);
+          setCaption('I couldn’t catch that. Tap the mic and try again in English or Japanese.');
+          return;
         }
-      };
-
-      recognition.onerror = (event: { error: string }) => {
-        if (recognitionRef.current !== recognition) return;
+        void processVoiceQuery(text);
+      },
+      message => {
         recognitionRef.current = null;
-        stopMicAnalysis();
-        setPhase('idle');
-        setCaption(event.error === 'no-speech' ? '' : `Speech error: ${event.error}`);
-        setAudioLevel(0);
-      };
-
-      recognition.onend = () => {
-        if (recognitionRef.current !== recognition) return;
-        recognitionRef.current = null;
-        stopMicAnalysis();
-        setCaption('');
         setPhase('idle');
         setAudioLevel(0);
-      };
-
-      try {
-        recognition.start();
-        setPhase('listening');
-        return;
-      } catch {
-        recognitionRef.current = null;
-        stopMicAnalysis();
-      }
-    }
-
-    // Interactive text prompt fallback if SpeechRecognition is blocked or unsupported
-    const promptText = window.prompt("Speak to Yomi (or enter query):", "Show my university pipeline and tasks");
-    if (promptText) {
-      setCaption(`“${promptText}”`);
-      void processVoiceQuery(promptText);
-    }
-  }, [processVoiceQuery, startMicAnalysis, stopMicAnalysis]);
+        setCaption(message);
+      });
+  }, [processVoiceQuery]);
 
   // Click or keyboard interruption: interrupts speech playback and immediately begins listening
   const interruptAndListen = useCallback(() => {
@@ -366,8 +255,7 @@ export default function VoiceHome({ onSend, renderChat, panel, setPanel, openDas
         recognitionRef.current = null;
         try { current.abort(); } catch { /* Ignore */ }
       }
-      stopMicAnalysis();
-      setCaption('');
+        setCaption('');
       setPhase('idle');
       setAudioLevel(0);
       return;
@@ -376,7 +264,7 @@ export default function VoiceHome({ onSend, renderChat, panel, setPanel, openDas
     if (phase === 'thinking') return;
 
     startListening();
-  }, [phase, interruptAndListen, startListening, stopMicAnalysis]);
+  }, [phase, interruptAndListen, startListening]);
 
   // Spacebar hotkey for hands-free voice toggle & barge-in
   useEffect(() => {
